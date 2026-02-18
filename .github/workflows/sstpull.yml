@@ -22,8 +22,10 @@ jobs:
           pip install numpy requests netCDF4
 
       - name: Run Script
-        run: python update_sst.py
-        working-directory: ${{ github.workspace }}
+        run: |
+          echo "VERIFYING LINE 14:"
+          sed -n '14p' update_sst.py
+          python update_sst.py
 
       - name: Commit and Push
         run: |
