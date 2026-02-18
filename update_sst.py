@@ -14,11 +14,11 @@ DATASET_ID = "noaacwLEOACSPOSSTL3SnrtCDaily"
 def fetch_and_convert():
     print(f"Fetching 3-day high-density window for {DATASET_ID}...")
     
-    # FIX: Corrected URL parameter order and bracket placement
-    # Server requires [(latest-2):(latest)][(LAT_MAX):(LAT_MIN)][(LON_MIN):(LON_MAX)]
+    # FIX: Added :1: stride to the time constraint [latest-2:1:latest]
+    # This tells the server: "Get indices -2, -1, and 0"
     url = (
         f"https://coastwatch.noaa.gov/erddap/griddap/{DATASET_ID}.nc?"
-        f"sea_surface_temperature[(latest-2):(latest)][({LAT_MAX}):({LAT_MIN})][({LON_MIN}):({LON_MAX})]"
+        f"sea_surface_temperature[(latest-2):1:(latest)][({LAT_MAX}):1:({LAT_MIN})][({LON_MIN}):1:({LON_MAX})]"
     )
     
     print(f"Requesting URL: {url}")
@@ -34,8 +34,8 @@ def fetch_and_convert():
 
 def process_data(content):
     with Dataset("memory", memory=content) as ds:
-        # stack is [Time, Lat, Lon]
-        sst_stack = ds.variables['sea_surface_temperature'][:, :, :]
+        # Accessing [Time, Lat, Lon]
+        sst_stack = ds.variables['sea_surface_temperature'][:]
         lats = ds.variables['latitude'][:]
         lons = ds.variables['longitude'][:]
         
@@ -44,7 +44,7 @@ def process_data(content):
             sst_avg_c = np.nanmean(sst_stack, axis=0)
         
         features = []
-        # FULL DENSITY: Processing every pixel to restore 35k+ points
+        # FULL DENSITY: No sampling/stepping
         for i in range(len(lats)): 
             for j in range(len(lons)):
                 val_c = sst_avg_c[i, j]
