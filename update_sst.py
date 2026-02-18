@@ -12,65 +12,56 @@ LON_MIN, LON_MAX = -76.8, -73.0
 DATASET_ID = "noaacwVIIRSj01SSTDaily3P"
 
 def fetch_and_convert():
-    # Step 1: Discover available timestamps to avoid 404s
-    info_url = f"https://coastwatch.noaa.gov/erddap/griddap/{DATASET_ID}.json?time"
-    print("Finding the latest high-res satellite passes...")
+    print(f"Requesting data directly using relative indices (bypassing busy metadata)...")
     
-    try:
-        info_resp = requests.get(info_url, timeout=30)
-        if info_resp.status_code != 200:
-            print("Server busy. Cannot find time indices.")
-            return
-            
-        rows = info_resp.json()['table']['rows']
-        # Take the last 3 successful passes for the 3-day average
-        latest_times = [f"({r[0]})" for r in rows[-3:]]
-        print(f"Averaging timestamps: {latest_times}")
-
-        combined_data = []
-        for ts in latest_times:
-            url = (f"https://coastwatch.noaa.gov/erddap/griddap/{DATASET_ID}.nc?"
-                   f"sea_surface_temperature[{ts}][({LAT_MAX}):({LAT_MIN})][({LON_MIN}):({LON_MAX})]")
-            print(f"Requesting pass: {ts}")
-            resp = requests.get(url, timeout=90)
+    combined_data = []
+    # We try indices 0, 1, and 2 (the 3 most recent successful passes)
+    for i in range(3):
+        # Using relative indexing (latest-N) is more robust than date strings
+        ts = f"(latest-{i})"
+        url = (f"https://coastwatch.noaa.gov/erddap/griddap/{DATASET_ID}.nc?"
+               f"sea_surface_temperature[{ts}][({LAT_MAX}):({LAT_MIN})][({LON_MIN}):({LON_MAX})]")
+        
+        print(f"Attempting pass: {ts}")
+        try:
+            resp = requests.get(url, timeout=120) # Increased timeout for high-res data
             if resp.status_code == 200:
+                print(f"  -> Success for {ts}")
                 combined_data.append(resp.content)
+            else:
+                print(f"  -> {ts} not available (Status {resp.status_code})")
+        except Exception as e:
+            print(f"  -> Connection error for {ts}: {e}")
 
-        if combined_data:
-            process_stack(combined_data)
-            
-    except Exception as e:
-        print(f"Error: {e}")
+    if combined_data:
+        process_stack(combined_data)
+    else:
+        print("CRITICAL: No data could be retrieved from the server.")
 
 def process_stack(data_contents):
-    # netCDF4 automatically applies scale/offset (unpacks) VIIRS data
+    # netCDF4 handles the internal unpacking (scale/offset)
     with Dataset("memory", memory=data_contents[0]) as ds:
         lats = ds.variables['latitude'][:]
         lons = ds.variables['longitude'][:]
-        # Create 3D stack: [Time, Lat, Lon]
         stack = np.full((len(data_contents), len(lats), len(lons)), np.nan)
         
     for idx, content in enumerate(data_contents):
         with Dataset("memory", memory=content) as ds:
-            # VIIRS data is Kelvin
+            # VIIRS is Kelvin
             stack[idx, :, :] = np.squeeze(ds.variables['sea_surface_temperature'][:])
 
-    # 3-Day Average to fill cloud gaps
+    # 3-Day Average to eliminate cloud gaps
     with np.errstate(all='ignore'):
         sst_avg_k = np.nanmean(stack, axis=0)
 
     features = []
-    # Loop through every single pixel (Full 35k+ Density)
+    # FULL DENSITY: 35,000+ points
     for i in range(len(lats)):
         for j in range(len(lons)):
             val_k = sst_avg_k[i, j]
-            
-            # Filter valid sea water (> 32°F in Kelvin)
-            if np.isfinite(val_k) and val_k > 273.15:
-                # CONVERSION: Kelvin to Fahrenheit
-                # Formula: (K - 273.15) * 1.8 + 32
+            if np.isfinite(val_k) and val_k > 270:
+                # KELVIN TO FAHRENHEIT
                 temp_f = (val_k - 273.15) * 1.8 + 32
-                
                 features.append({
                     "type": "Feature",
                     "geometry": {"type": "Point", "coordinates": [float(lons[j]), float(lats[i])]},
@@ -80,7 +71,7 @@ def process_stack(data_contents):
     output = {"type": "FeatureCollection", "features": features}
     with open("sst_data.json", "w") as f:
         json.dump(output, f, allow_nan=False)
-    print(f"Success! Restored 750m density with {len(features)} points in Fahrenheit.")
+    print(f"Success! High-Res map created with {len(features)} points in Fahrenheit.")
 
 if __name__ == "__main__":
     fetch_and_convert()
