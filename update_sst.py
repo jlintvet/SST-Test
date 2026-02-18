@@ -4,42 +4,53 @@ import json
 from netCDF4 import Dataset
 import os
 
-# VA Beach / Hatteras Fishing Box
-# Simplified constraints to avoid 400 errors
+# Coordinates for VA Beach / Hatteras
 LAT_MIN, LAT_MAX = 34.0, 37.5
 LON_MIN, LON_MAX = -76.5, -73.0
 
-# Stabilized NOAA L3S ID
 DATASET_ID = "noaacwLEOACSPOSSTL3SnrtCDaily"
 
 def fetch_and_convert():
-    print(f"Connecting to NOAA L3S: {DATASET_ID}")
-    
-    # Constructing the URL with explicit coordinate constraints
-    # Added [(latest)] for time and used the standard ERDDAP [(min):(max)] syntax
-    url = (
-        f"https://coastwatch.noaa.gov/erddap/griddap/{DATASET_ID}.nc?"
-        f"sea_surface_temperature[(latest)][({LAT_MAX}):({LAT_MIN})][({LON_MIN}):({LON_MAX})]"
-    )
-    
-    print(f"Requesting URL: {url}")
+    # Step 1: Get the latest time index
+    # We request the 'time' variable metadata to see the last available index
+    info_url = f"https://coastwatch.noaa.gov/erddap/griddap/{DATASET_ID}.json?time"
+    print(f"Checking latest time at: {info_url}")
     
     try:
-        response = requests.get(url, timeout=120)
+        info_resp = requests.get(info_url, timeout=30)
+        if info_resp.status_code != 200:
+            print("Could not fetch time metadata. Server might be down.")
+            return
+        
+        # Parse the JSON to find the last time index
+        time_data = info_resp.json()
+        # In ERDDAP JSON, data is in ['table']['rows']
+        # We take the last row [-1], which is the most recent time
+        latest_time_str = time_data['table']['rows'][-1][0]
+        print(f"Latest timestamp found: {latest_time_str}")
+
+        # Step 2: Fetch the SST data using the explicit timestamp
+        # Using [({latest_time_str})] ensures the server knows exactly which slice we want
+        data_url = (
+            f"https://coastwatch.noaa.gov/erddap/griddap/{DATASET_ID}.nc?"
+            f"sea_surface_temperature[({latest_time_str})][({LAT_MAX}):({LAT_MIN})][({LON_MIN}):({LON_MAX})]"
+        )
+        
+        print(f"Requesting Data: {data_url}")
+        response = requests.get(data_url, timeout=120)
         
         if response.status_code == 200:
-            print("Successfully connected. Processing data...")
             process_data(response.content)
         else:
-            # If 400, the server likely dislikes the specific coordinate bracket
-            print(f"Server returned {response.status_code}. Response body: {response.text}")
+            print(f"Data fetch failed: {response.status_code}")
+            print(response.text)
             
     except Exception as e:
-        print(f"Network error: {e}")
+        print(f"Error: {e}")
 
 def process_data(content):
     with Dataset("memory", memory=content) as ds:
-        # Note: L3S datasets often have a 'time' dimension we must index
+        # Index [0] is the single time slice we requested
         sst_raw = ds.variables['sea_surface_temperature'][0, :, :]
         lats = ds.variables['latitude'][:]
         lons = ds.variables['longitude'][:]
@@ -49,7 +60,6 @@ def process_data(content):
             for j in range(len(lons)):
                 val = sst_raw[i, j]
                 if not np.isnan(val):
-                    # Convert Kelvin to Fahrenheit
                     temp_f = (float(val) - 273.15) * 9/5 + 32
                     features.append({
                         "type": "Feature",
