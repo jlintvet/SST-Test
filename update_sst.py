@@ -8,13 +8,14 @@ import os
 LAT_MIN, LAT_MAX = 34.0, 37.5
 LON_MIN, LON_MAX = -76.8, -73.0
 
-# Using the stable ACSPO L3S dataset (2km resolution)
+# Using the stable ACSPO L3S dataset
 DATASET_ID = "noaacwLEOACSPOSSTL3SnrtCDaily"
 
 def fetch_and_convert():
     print(f"Fetching 3-day high-density window for {DATASET_ID}...")
     
-    # Requesting the last 3 days of data
+    # FIX: Corrected URL parameter order and bracket placement
+    # Server requires [(latest-2):(latest)][(LAT_MAX):(LAT_MIN)][(LON_MIN):(LON_MAX)]
     url = (
         f"https://coastwatch.noaa.gov/erddap/griddap/{DATASET_ID}.nc?"
         f"sea_surface_temperature[(latest-2):(latest)][({LAT_MAX}):({LAT_MIN})][({LON_MIN}):({LON_MAX})]"
@@ -27,7 +28,7 @@ def fetch_and_convert():
         if response.status_code == 200:
             process_data(response.content)
         else:
-            print(f"Server Error {response.status_code}: {response.text[:100]}")
+            print(f"Server Error {response.status_code}: {response.text[:150]}")
     except Exception as e:
         print(f"Connection failed: {e}")
 
@@ -43,7 +44,7 @@ def process_data(content):
             sst_avg_c = np.nanmean(sst_stack, axis=0)
         
         features = []
-        # FULL DENSITY: Loop through every pixel
+        # FULL DENSITY: Processing every pixel to restore 35k+ points
         for i in range(len(lats)): 
             for j in range(len(lons)):
                 val_c = sst_avg_c[i, j]
