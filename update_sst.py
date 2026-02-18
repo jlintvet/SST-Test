@@ -5,35 +5,41 @@ from netCDF4 import Dataset
 import os
 
 # VA Beach / Hatteras Fishing Box
-LAT_RANGE = "[(37.5):(34.0)]"
-LON_RANGE = "[(-76.5):(-73.0)]"
+# Simplified constraints to avoid 400 errors
+LAT_MIN, LAT_MAX = 34.0, 37.5
+LON_MIN, LON_MAX = -76.5, -73.0
 
-# This L3S dataset is the most stable high-res (approx 2km) product for 2026
-# It combines all VIIRS satellites so it rarely 404s
+# Stabilized NOAA L3S ID
 DATASET_ID = "noaacwLEOACSPOSSTL3SnrtCDaily"
 
 def fetch_and_convert():
-    print(f"Connecting to stabilized NOAA L3S Dataset: {DATASET_ID}")
+    print(f"Connecting to NOAA L3S: {DATASET_ID}")
     
-    # We use 'latest' time and request the 'sea_surface_temperature' variable
-    url = f"https://coastwatch.noaa.gov/erddap/griddap/{DATASET_ID}.nc?sea_surface_temperature[(latest)]{LAT_RANGE}{LON_RANGE}"
+    # Constructing the URL with explicit coordinate constraints
+    # Added [(latest)] for time and used the standard ERDDAP [(min):(max)] syntax
+    url = (
+        f"https://coastwatch.noaa.gov/erddap/griddap/{DATASET_ID}.nc?"
+        f"sea_surface_temperature[(latest)][({LAT_MAX}):({LAT_MIN})][({LON_MIN}):({LON_MAX})]"
+    )
+    
+    print(f"Requesting URL: {url}")
     
     try:
-        response = requests.get(url, timeout=120) # Higher timeout for collated data
+        response = requests.get(url, timeout=120)
         
         if response.status_code == 200:
             print("Successfully connected. Processing data...")
             process_data(response.content)
         else:
-            print(f"Server returned {response.status_code}. Checking alternative access...")
-            # If the primary still fails, it's likely a server maintenance window.
+            # If 400, the server likely dislikes the specific coordinate bracket
+            print(f"Server returned {response.status_code}. Response body: {response.text}")
             
     except Exception as e:
         print(f"Network error: {e}")
 
 def process_data(content):
     with Dataset("memory", memory=content) as ds:
-        # L3S variable name is often 'sea_surface_temperature'
+        # Note: L3S datasets often have a 'time' dimension we must index
         sst_raw = ds.variables['sea_surface_temperature'][0, :, :]
         lats = ds.variables['latitude'][:]
         lons = ds.variables['longitude'][:]
@@ -57,8 +63,7 @@ def process_data(content):
             "features": features
         }
         
-        file_path = os.path.join(os.getcwd(), "sst_data.json")
-        with open(file_path, "w") as f:
+        with open("sst_data.json", "w") as f:
             json.dump(output, f)
             
         print(f"Success! Created sst_data.json with {len(features)} points.")
