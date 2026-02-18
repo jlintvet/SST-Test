@@ -4,55 +4,42 @@ import json
 from netCDF4 import Dataset
 import os
 
-# VA Beach / Hatteras Box
-LAT_MIN, LAT_MAX = 34.0, 37.5
-LON_MIN, LON_MAX = -76.8, -73.0
-
-# Using the stable ACSPO L3S dataset
-DATASET_ID = "noaacwLEOACSPOSSTL3SnrtCDaily"
+# Broad box covering the Sounds and the Offshore Canyons
+LAT_MIN, LAT_MAX = 34.0, 37.0
+LON_MIN, LON_MAX = -76.8, -74.0 # Expanded West to include the sounds
+DATASET_ID = "jplMURSST41" 
 
 def fetch_and_convert():
-    print(f"Fetching 3-day high-density window for {DATASET_ID}...")
-    
-    # FIX: Added :1: stride to the time constraint [latest-2:1:latest]
-    # This tells the server: "Get indices -2, -1, and 0"
-    url = (
-        f"https://coastwatch.noaa.gov/erddap/griddap/{DATASET_ID}.nc?"
-        f"sea_surface_temperature[(latest-2):1:(latest)][({LAT_MAX}):1:({LAT_MIN})][({LON_MIN}):1:({LON_MAX})]"
-    )
-    
-    print(f"Requesting URL: {url}")
-    
+    info_url = f"https://coastwatch.noaa.gov/erddap/griddap/{DATASET_ID}.json?time"
     try:
-        response = requests.get(url, timeout=180)
+        info_resp = requests.get(info_url, timeout=30)
+        latest_time_str = info_resp.json()['table']['rows'][-1][0]
+
+        data_url = (
+            f"https://coastwatch.noaa.gov/erddap/griddap/{DATASET_ID}.nc?"
+            f"analysed_sst[({latest_time_str})][({LAT_MIN}):({LAT_MAX})][({LON_MIN}):({LON_MAX})]"
+        )
+        
+        response = requests.get(data_url, timeout=120)
         if response.status_code == 200:
             process_data(response.content)
-        else:
-            print(f"Server Error {response.status_code}: {response.text[:150]}")
     except Exception as e:
-        print(f"Connection failed: {e}")
+        print(f"Error: {e}")
 
 def process_data(content):
     with Dataset("memory", memory=content) as ds:
-        # Accessing [Time, Lat, Lon]
-        sst_stack = ds.variables['sea_surface_temperature'][:]
+        sst_raw = ds.variables['analysed_sst'][0, :, :]
         lats = ds.variables['latitude'][:]
         lons = ds.variables['longitude'][:]
         
-        # Average across the 3 days to eliminate cloud gaps
-        with np.errstate(all='ignore'):
-            sst_avg_c = np.nanmean(sst_stack, axis=0)
-        
         features = []
-        # FULL DENSITY: No sampling/stepping
+        # REMOVED STEPS: Processing every single 1km pixel for a solid look
         for i in range(len(lats)): 
             for j in range(len(lons)):
-                val_c = sst_avg_c[i, j]
+                val = sst_raw[i, j]
                 
-                if np.isfinite(val_c) and val_c > -5:
-                    # CONVERSION: Celsius to Fahrenheit
-                    temp_f = (float(val_c) * 1.8) + 32
-                    
+                if np.isfinite(val):
+                    temp_f = (float(val) - 273.15) * 9/5 + 32
                     features.append({
                         "type": "Feature",
                         "geometry": {"type": "Point", "coordinates": [float(lons[j]), float(lats[i])]},
@@ -62,8 +49,7 @@ def process_data(content):
         output = {"type": "FeatureCollection", "features": features}
         with open("sst_data.json", "w") as f:
             json.dump(output, f, allow_nan=False)
-            
-        print(f"Success! High-density Fahrenheit JSON created with {len(features)} points.")
+        print(f"Success! Created solid map with {len(features)} points.")
 
 if __name__ == "__main__":
     fetch_and_convert()
