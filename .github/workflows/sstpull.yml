@@ -1,7 +1,7 @@
 name: Update SST Data
 
 on:
-  workflow_dispatch: # This lets you trigger it manually for testing
+  workflow_dispatch:
   schedule:
     - cron: '0 */4 * * *'
 
@@ -11,11 +11,10 @@ jobs:
     # Explicitly grant permission to write to the repo
     permissions:
       contents: write
+      
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.ref }} # Explicitly tell it to use the current branch
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -23,19 +22,16 @@ jobs:
           python-version: '3.10'
 
       - name: Install Dependencies
-        run: |
-          pip install numpy requests netCDF4
+        run: pip install numpy requests netCDF4
 
       - name: Run Script
-        run: |
-          echo "VERIFYING LINE 14:"
-          sed -n '14p' update_sst.py
-          python update_sst.py
+        run: python update_sst.py
 
       - name: Commit and Push
         run: |
-          git config --global user.name "SST-Bot"
-          git config --global user.email "bot@github.com"
-          git add sst_data.json || echo "No changes"
-          git commit -m "Update SST" || exit 0
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add sst_data.json
+          # The "|| exit 0" prevents the workflow from failing if there are no data changes
+          git commit -m "Update SST Data" || exit 0
           git push
