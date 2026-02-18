@@ -11,7 +11,7 @@ URL = "https://coastwatch.noaa.gov/erddap/griddap/noaacwVIIRSnppSSTDaily3U.nc?se
 def fetch_and_convert():
     print("Fetching data from NOAA...")
     response = requests.get(URL)
-    if response.status_status != 200:
+    if response.status_code != 200:
         print(f"Error: {response.status_code}")
         return
 
