@@ -3,23 +3,21 @@ import requests
 import json
 from netCDF4 import Dataset
 import os
-from datetime import datetime, timedelta
 
 # VA Beach / Hatteras Box
 LAT_MIN, LAT_MAX = 34.0, 37.5
 LON_MIN, LON_MAX = -76.8, -73.0
 
-# Using the 1km MUR Dataset - The gold standard for stability
-DATASET_ID = "jplMURSST41"
+# Using the stable ACSPO L3S dataset (2km resolution)
+DATASET_ID = "noaacwLEOACSPOSSTL3SnrtCDaily"
 
 def fetch_and_convert():
-    print(f"Fetching 3-day high-res window for {DATASET_ID}...")
+    print(f"Fetching 3-day high-density window for {DATASET_ID}...")
     
-    # MUR is updated daily; we grab the last 3 days to fill clouds
-    # We use explicit date indices which ERDDAP handles better than 'latest'
+    # Requesting the last 3 days of data
     url = (
         f"https://coastwatch.noaa.gov/erddap/griddap/{DATASET_ID}.nc?"
-        f"analysed_sst[(latest-2):(latest)][({LAT_MIN}):({LAT_MAX})][({LON_MIN}):({LON_MAX})]"
+        f"sea_surface_temperature[(latest-2):(latest)][({LAT_MAX}):({LAT_MIN})][({LON_MIN}):({LON_MAX})]"
     )
     
     print(f"Requesting URL: {url}")
@@ -36,23 +34,23 @@ def fetch_and_convert():
 def process_data(content):
     with Dataset("memory", memory=content) as ds:
         # stack is [Time, Lat, Lon]
-        sst_stack = ds.variables['analysed_sst'][:, :, :]
+        sst_stack = ds.variables['sea_surface_temperature'][:, :, :]
         lats = ds.variables['latitude'][:]
         lons = ds.variables['longitude'][:]
         
         # Average across the 3 days to eliminate cloud gaps
         with np.errstate(all='ignore'):
-            sst_avg_k = np.nanmean(sst_stack, axis=0)
+            sst_avg_c = np.nanmean(sst_stack, axis=0)
         
         features = []
-        # No skipping (Full 35,000+ point density)
+        # FULL DENSITY: Loop through every pixel
         for i in range(len(lats)): 
             for j in range(len(lons)):
-                val_k = sst_avg_k[i, j]
+                val_c = sst_avg_c[i, j]
                 
-                if np.isfinite(val_k) and val_k > 270:
-                    # CONVERSION: Kelvin to Fahrenheit
-                    temp_f = (float(val_k) - 273.15) * 1.8 + 32
+                if np.isfinite(val_c) and val_c > -5:
+                    # CONVERSION: Celsius to Fahrenheit
+                    temp_f = (float(val_c) * 1.8) + 32
                     
                     features.append({
                         "type": "Feature",
