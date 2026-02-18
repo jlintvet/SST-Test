@@ -4,9 +4,9 @@ import json
 from netCDF4 import Dataset
 import os
 
-# Broad box covering the Sounds and the Offshore Canyons
-LAT_MIN, LAT_MAX = 34.0, 37.0
-LON_MIN, LON_MAX = -76.8, -74.0 # Expanded West to include the sounds
+# Tight box for Oregon Inlet to Hatteras offshore
+LAT_MIN, LAT_MAX = 34.5, 36.5
+LON_MIN, LON_MAX = -75.8, -74.0 # Narrowed to focus on the Stream edge
 DATASET_ID = "jplMURSST41" 
 
 def fetch_and_convert():
@@ -33,23 +33,25 @@ def process_data(content):
         lons = ds.variables['longitude'][:]
         
         features = []
-        # REMOVED STEPS: Processing every single 1km pixel for a solid look
+        # No more skipping (removing 'step 3') for maximum resolution
         for i in range(len(lats)): 
             for j in range(len(lons)):
                 val = sst_raw[i, j]
+                lon = float(lons[j])
                 
-                if np.isfinite(val):
+                # Filter: Only finite numbers AND only offshore points (East of the beach)
+                if np.isfinite(val) and lon > -75.5:
                     temp_f = (float(val) - 273.15) * 9/5 + 32
                     features.append({
                         "type": "Feature",
-                        "geometry": {"type": "Point", "coordinates": [float(lons[j]), float(lats[i])]},
+                        "geometry": {"type": "Point", "coordinates": [lon, float(lats[i])]},
                         "properties": {"temp_f": round(temp_f, 1)}
                     })
         
         output = {"type": "FeatureCollection", "features": features}
         with open("sst_data.json", "w") as f:
             json.dump(output, f, allow_nan=False)
-        print(f"Success! Created solid map with {len(features)} points.")
+        print(f"Success! Generated {len(features)} offshore points.")
 
 if __name__ == "__main__":
     fetch_and_convert()
