@@ -3,61 +3,85 @@ import requests
 import json
 from netCDF4 import Dataset
 import os
+from datetime import datetime
 
-# Coordinates for VA Beach / Hatteras Box
+# Settings
 LAT_MIN, LAT_MAX = 34.0, 37.5
 LON_MIN, LON_MAX = -76.5, -73.0
+MAX_DAYS = 7  # <--- Change this for more/less history
+OUTPUT_DIR = "historical_data"
 
-# Tier 1: 750m VIIRS (High Resolution)
-# Tier 2: 2km L3S (Stable Fallback)
 DATASETS = [
     {"id": "noaacwVIIRSj01SSTDaily3P", "res": "high"},
     {"id": "noaacwLEOACSPOSSTL3SnrtCDaily", "res": "low"}
 ]
 
-def fetch_and_convert():
+if not os.path.exists(OUTPUT_DIR):
+    os.makedirs(OUTPUT_DIR)
+
+def fetch_history():
+    # Step 1: Get available timestamps from the primary dataset
+    ds_id = DATASETS[0]["id"]
+    info_url = f"https://coastwatch.noaa.gov/erddap/griddap/{ds_id}.json?time"
+    
+    try:
+        resp = requests.get(info_url, timeout=20)
+        # ERDDAP returns timestamps in ISO format: "2024-02-18T12:00:00Z"
+        all_timestamps = [row[0] for row in resp.json()['table']['rows']]
+        
+        # Get the last X timestamps
+        target_timestamps = all_timestamps[-MAX_DAYS:]
+        print(f"Found {len(target_timestamps)} updates to fetch.")
+        
+        manifest = []
+
+        for ts in target_timestamps:
+            # Clean timestamp for filename (remove T, Z, and colons)
+            clean_date = ts.split('T')[0] 
+            filename = f"sst_{clean_date}.json"
+            filepath = os.path.join(OUTPUT_DIR, filename)
+            
+            print(f"Processing {clean_date}...")
+            
+            # Fetch data for this specific timestamp
+            success = download_timestamp(ts, filepath)
+            
+            if success:
+                manifest.append({"date": clean_date, "file": filename})
+
+        # Save a manifest file so the UI knows the order of files
+        with open(os.path.join(OUTPUT_DIR, "manifest.json"), "w") as f:
+            json.dump(manifest, f)
+        print("Done! Historical data and manifest.json ready.")
+
+    except Exception as e:
+        print(f"Failed to fetch timeline: {e}")
+
+def download_timestamp(ts, output_path):
+    # Try datasets in order of resolution preference
     for ds in DATASETS:
         ds_id = ds["id"]
         is_low_res = (ds["res"] == "low")
-        print(f"Trying {ds['res']}-res dataset: {ds_id}...")
+        url = (
+            f"https://coastwatch.noaa.gov/erddap/griddap/{ds_id}.nc?"
+            f"sea_surface_temperature[({ts})][({LAT_MAX}):({LAT_MIN})][({LON_MIN}):({LON_MAX})]"
+        )
         
         try:
-            # Step 1: Discover Timestamp
-            info_url = f"https://coastwatch.noaa.gov/erddap/griddap/{ds_id}.json?time"
-            info_resp = requests.get(info_url, timeout=20)
-            if info_resp.status_code != 200:
-                continue
-            
-            latest_ts = info_resp.json()['table']['rows'][-1][0]
-            
-            # Step 2: Request Data (Handling VIIRS vs L3S variable names)
-            var_name = "sea_surface_temperature" if is_low_res else "sea_surface_temperature"
-            url = (
-                f"https://coastwatch.noaa.gov/erddap/griddap/{ds_id}.nc?"
-                f"{var_name}[({latest_ts})][({LAT_MAX}):({LAT_MIN})][({LON_MIN}):({LON_MAX})]"
-            )
-            
             response = requests.get(url, timeout=120)
             if response.status_code == 200:
-                print(f"Success with {ds['res']}-res data!")
-                process_data(response.content, is_low_res)
-                return # Stop after first successful fetch
-            
-        except Exception as e:
-            print(f"Skipping {ds_id} due to error.")
+                process_and_save(response.content, is_low_res, output_path)
+                return True
+        except:
+            continue
+    return False
 
-    print("CRITICAL: All datasets failed.")
-
-def process_data(content, is_low_res):
+def process_and_save(content, is_low_res, output_path):
     with Dataset("memory", memory=content) as ds:
-        # VIIRS and L3S have slightly different internal structures
         var_name = "sea_surface_temperature"
         raw_val = np.squeeze(ds.variables[var_name][:])
         lats = ds.variables['latitude'][:]
         lons = ds.variables['longitude'][:]
-        
-        # VIIRS (High-res) is often Kelvin, L3S is Celsius. 
-        # We check the units attribute to be safe.
         units = ds.variables[var_name].units
         
         features = []
@@ -65,26 +89,20 @@ def process_data(content, is_low_res):
             for j in range(len(lons)):
                 val = raw_val[i, j]
                 if np.isfinite(val) and val > -30000:
-                    # Convert to Fahrenheit based on native units
-                    if "K" in units: # Kelvin
-                        temp_f = (float(val) - 273.15) * 1.8 + 32
-                    else: # Celsius
-                        temp_f = (float(val) * 1.8) + 32
+                    # Unit Conversion
+                    temp_c = (float(val) - 273.15) if "K" in units else float(val)
+                    temp_f = (temp_c * 1.8) + 32
                     
-                    if 35 < temp_f < 95: # Basic ocean filter
+                    if 35 < temp_f < 95:
                         features.append({
                             "type": "Feature",
                             "geometry": {"type": "Point", "coordinates": [float(lons[j]), float(lats[i])]},
-                            "properties": {
-                                "temp_f": round(temp_f, 1),
-                                "is_low_res": is_low_res # Pass the flag to the map
-                            }
+                            "properties": {"temp_f": round(temp_f, 1)}
                         })
         
         output = {"type": "FeatureCollection", "features": features}
-        with open("sst_data.json", "w") as f:
-            json.dump(output, f, allow_nan=False)
-        print(f"Created map with {len(features)} points.")
+        with open(output_path, "w") as f:
+            json.dump(output, f)
 
 if __name__ == "__main__":
-    fetch_and_convert()
+    fetch_history()
