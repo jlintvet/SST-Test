@@ -8,9 +8,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    # Explicitly grant permission to write to the repo
     permissions:
-      contents: write
+      contents: write # This gives the bot permission to save files to your repo
       
     steps:
       - name: Checkout Repo
@@ -31,7 +30,11 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add sst_data.json
-          # The "|| exit 0" prevents the workflow from failing if there are no data changes
-          git commit -m "Update SST Data" || exit 0
+          
+          # Force git to see the new folder
+          git add historical_data/*.json
+          git add sst_data.json || true
+          
+          # Commit only if there are changes. || exit 0 prevents the "Error" if nothing is new.
+          git commit -m "Automated SST History Update" || exit 0
           git push
