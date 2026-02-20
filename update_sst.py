@@ -4,7 +4,6 @@ import json
 from netCDF4 import Dataset
 import os
 import time
-from datetime import datetime
 
 # Settings
 LAT_MIN, LAT_MAX = 34.0, 37.5
@@ -12,79 +11,81 @@ LON_MIN, LON_MAX = -76.5, -73.0
 MAX_DAYS = 7 
 OUTPUT_DIR = "historical_data"
 
-# Added this to prevent the "Expecting value: line 1 column 1" error
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
 
+# Expanded list of Dataset IDs for 2026 redundancy
 DATASETS = [
-    {"id": "noaacwVIIRSj01SSTDaily3P", "res": "high"},
-    {"id": "noaacwLEOACSPOSSTL3SnrtCDaily", "res": "low"}
+    {"id": "noaacwVIIRSj01SSTDaily3P", "res": "high"},   # Original target
+    {"id": "noaacwNPPVIIRSchlaDaily", "res": "high"},    # VIIRS backup
+    {"id": "noaacwLEOACSPOSSTL3SnrtCDaily", "res": "mid"}, # Reliable L3S
+    {"id": "noaacrwsstDaily", "res": "low"}              # CoralTemp (Global backup)
 ]
 
 if not os.path.exists(OUTPUT_DIR):
     os.makedirs(OUTPUT_DIR)
 
 def fetch_history():
-    ds_id = DATASETS[0]["id"]
-    info_url = f"https://coastwatch.noaa.gov/erddap/griddap/{ds_id}.json?time"
-    
-    try:
-        # Added HEADERS here
-        resp = requests.get(info_url, headers=HEADERS, timeout=30)
-        if resp.status_code != 200:
-            print(f"NOAA error: {resp.status_code}")
-            return
-
-        all_timestamps = [row[0] for row in resp.json()['table']['rows']]
-        target_timestamps = all_timestamps[-MAX_DAYS:]
-        print(f"Found {len(target_timestamps)} updates to fetch.")
-        
-        manifest = []
-
-        for ts in target_timestamps:
-            clean_date = ts.split('T')[0] 
-            filename = f"sst_{clean_date}.json"
-            filepath = os.path.join(OUTPUT_DIR, filename)
-            
-            print(f"Processing {clean_date}...")
-            
-            # Fetch data
-            success = download_timestamp(ts, filepath)
-            
-            if success:
-                manifest.append({"date": clean_date, "file": filename})
-                time.sleep(2) # Added a small pause to be nice to the server
-
-        with open(os.path.join(OUTPUT_DIR, "manifest.json"), "w") as f:
-            json.dump(manifest, f, indent=2)
-        print("Done! Historical data and manifest.json ready.")
-
-    except Exception as e:
-        print(f"Failed to fetch timeline: {e}")
-
-def download_timestamp(ts, output_path):
+    success_count = 0
+    # Try datasets until one gives us a valid timeline
     for ds in DATASETS:
         ds_id = ds["id"]
-        is_low_res = (ds["res"] == "low")
-        url = (
-            f"https://coastwatch.noaa.gov/erddap/griddap/{ds_id}.nc?"
-            f"sea_surface_temperature[({ts})][({LAT_MAX}):({LAT_MIN})][({LON_MIN}):({LON_MAX})]"
-        )
+        info_url = f"https://coastwatch.noaa.gov/erddap/griddap/{ds_id}.json?time"
         
+        print(f"Checking dataset timeline: {ds_id}...")
         try:
-            # Added HEADERS here
-            response = requests.get(url, headers=HEADERS, timeout=120)
-            if response.status_code == 200:
-                process_and_save(response.content, is_low_res, output_path)
-                return True
-        except:
+            resp = requests.get(info_url, headers=HEADERS, timeout=20)
+            if resp.status_code == 404:
+                print(f"  404: Dataset {ds_id} not found. Trying next...")
+                continue
+            
+            all_timestamps = [row[0] for row in resp.json()['table']['rows']]
+            target_timestamps = all_timestamps[-MAX_DAYS:]
+            print(f"  Found {len(target_timestamps)} updates. Fetching...")
+            
+            manifest = []
+            for ts in target_timestamps:
+                clean_date = ts.split('T')[0]
+                filename = f"sst_{clean_date}.json"
+                filepath = os.path.join(OUTPUT_DIR, filename)
+                
+                if download_timestamp(ds_id, ts, filepath):
+                    manifest.append({"date": clean_date, "file": filename})
+                    success_count += 1
+                    time.sleep(1)
+
+            # Save the index of what we found
+            if manifest:
+                with open(os.path.join(OUTPUT_DIR, "manifest.json"), "w") as f:
+                    json.dump(manifest, f, indent=2)
+                print(f"Success! Saved {success_count} days of data.")
+                return # Stop if we successfully got history from a dataset
+
+        except Exception as e:
+            print(f"  Error checking {ds_id}: {e}")
             continue
+
+    print("CRITICAL: All datasets returned 404 or errors.")
+
+def download_timestamp(ds_id, ts, output_path):
+    url = (
+        f"https://coastwatch.noaa.gov/erddap/griddap/{ds_id}.nc?"
+        f"sea_surface_temperature[({ts})][({LAT_MAX}):({LAT_MIN})][({LON_MIN}):({LON_MAX})]"
+    )
+    try:
+        response = requests.get(url, headers=HEADERS, timeout=60)
+        if response.status_code == 200:
+            process_and_save(response.content, output_path)
+            return True
+    except:
+        pass
     return False
 
-def process_and_save(content, is_low_res, output_path):
+def process_and_save(content, output_path):
     with Dataset("memory", memory=content) as ds:
-        var_name = "sea_surface_temperature"
+        # Some datasets use 'sst', others 'sea_surface_temperature'
+        var_name = "sea_surface_temperature" if "sea_surface_temperature" in ds.variables else "sst"
         raw_val = np.squeeze(ds.variables[var_name][:])
         lats = ds.variables['latitude'][:]
         lons = ds.variables['longitude'][:]
@@ -97,12 +98,11 @@ def process_and_save(content, is_low_res, output_path):
                 if np.isfinite(val) and val > -30000:
                     temp_c = (float(val) - 273.15) if "K" in units else float(val)
                     temp_f = (temp_c * 1.8) + 32
-                    
                     if 35 < temp_f < 95:
                         features.append({
                             "type": "Feature",
                             "geometry": {"type": "Point", "coordinates": [float(lons[j]), float(lats[i])]},
-                            "properties": {"temp_f": round(temp_f, 1)}
+                            "properties": {"t": round(temp_f, 1)}
                         })
         
         output = {"type": "FeatureCollection", "features": features}
