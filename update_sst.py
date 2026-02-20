@@ -3,13 +3,19 @@ import requests
 import json
 from netCDF4 import Dataset
 import os
+import time
 from datetime import datetime
 
 # Settings
 LAT_MIN, LAT_MAX = 34.0, 37.5
 LON_MIN, LON_MAX = -76.5, -73.0
-MAX_DAYS = 7  # <--- Change this for more/less history
+MAX_DAYS = 7 
 OUTPUT_DIR = "historical_data"
+
+# Added this to prevent the "Expecting value: line 1 column 1" error
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+}
 
 DATASETS = [
     {"id": "noaacwVIIRSj01SSTDaily3P", "res": "high"},
@@ -20,45 +26,44 @@ if not os.path.exists(OUTPUT_DIR):
     os.makedirs(OUTPUT_DIR)
 
 def fetch_history():
-    # Step 1: Get available timestamps from the primary dataset
     ds_id = DATASETS[0]["id"]
     info_url = f"https://coastwatch.noaa.gov/erddap/griddap/{ds_id}.json?time"
     
     try:
-        resp = requests.get(info_url, timeout=20)
-        # ERDDAP returns timestamps in ISO format: "2024-02-18T12:00:00Z"
+        # Added HEADERS here
+        resp = requests.get(info_url, headers=HEADERS, timeout=30)
+        if resp.status_code != 200:
+            print(f"NOAA error: {resp.status_code}")
+            return
+
         all_timestamps = [row[0] for row in resp.json()['table']['rows']]
-        
-        # Get the last X timestamps
         target_timestamps = all_timestamps[-MAX_DAYS:]
         print(f"Found {len(target_timestamps)} updates to fetch.")
         
         manifest = []
 
         for ts in target_timestamps:
-            # Clean timestamp for filename (remove T, Z, and colons)
             clean_date = ts.split('T')[0] 
             filename = f"sst_{clean_date}.json"
             filepath = os.path.join(OUTPUT_DIR, filename)
             
             print(f"Processing {clean_date}...")
             
-            # Fetch data for this specific timestamp
+            # Fetch data
             success = download_timestamp(ts, filepath)
             
             if success:
                 manifest.append({"date": clean_date, "file": filename})
+                time.sleep(2) # Added a small pause to be nice to the server
 
-        # Save a manifest file so the UI knows the order of files
         with open(os.path.join(OUTPUT_DIR, "manifest.json"), "w") as f:
-            json.dump(manifest, f)
+            json.dump(manifest, f, indent=2)
         print("Done! Historical data and manifest.json ready.")
 
     except Exception as e:
         print(f"Failed to fetch timeline: {e}")
 
 def download_timestamp(ts, output_path):
-    # Try datasets in order of resolution preference
     for ds in DATASETS:
         ds_id = ds["id"]
         is_low_res = (ds["res"] == "low")
@@ -68,7 +73,8 @@ def download_timestamp(ts, output_path):
         )
         
         try:
-            response = requests.get(url, timeout=120)
+            # Added HEADERS here
+            response = requests.get(url, headers=HEADERS, timeout=120)
             if response.status_code == 200:
                 process_and_save(response.content, is_low_res, output_path)
                 return True
@@ -89,7 +95,6 @@ def process_and_save(content, is_low_res, output_path):
             for j in range(len(lons)):
                 val = raw_val[i, j]
                 if np.isfinite(val) and val > -30000:
-                    # Unit Conversion
                     temp_c = (float(val) - 273.15) if "K" in units else float(val)
                     temp_f = (temp_c * 1.8) + 32
                     
