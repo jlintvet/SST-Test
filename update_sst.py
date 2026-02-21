@@ -4,12 +4,14 @@ import json
 from netCDF4 import Dataset
 import os
 import time
+from datetime import datetime
 
 # Settings
 LAT_MIN, LAT_MAX = 34.0, 37.5
 LON_MIN, LON_MAX = -76.5, -73.0
 MAX_DAYS = 7 
 OUTPUT_DIR = "historical_data"
+INTERVAL_SECONDS = 3600  # 1 Hour
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -26,7 +28,6 @@ if not os.path.exists(OUTPUT_DIR):
     os.makedirs(OUTPUT_DIR)
 
 def get_variable_name(ds_id):
-    """Checks the dataset to see if it uses 'sst' or 'sea_surface_temperature'"""
     try:
         info_url = f"https://coastwatch.noaa.gov/erddap/info/{ds_id}/index.json"
         resp = requests.get(info_url, headers=HEADERS, timeout=20)
@@ -43,7 +44,7 @@ def get_variable_name(ds_id):
 def fetch_history():
     for ds in DATASETS:
         ds_id = ds["id"]
-        print(f"--- Trying Dataset: {ds_id} ---")
+        print(f"[{datetime.now().strftime('%H:%M:%S')}] Checking Dataset: {ds_id}")
         
         try:
             info_url = f"https://coastwatch.noaa.gov/erddap/griddap/{ds_id}.json?time"
@@ -56,24 +57,28 @@ def fetch_history():
             target_timestamps = all_timestamps[-MAX_DAYS:]
             
             var_name = get_variable_name(ds_id)
-            print(f"  Found {len(target_timestamps)} dates. Using variable: {var_name}")
-            
             manifest = []
+
             for ts in target_timestamps:
                 clean_date = ts.split('T')[0]
                 filename = f"sst_{clean_date}.json"
                 filepath = os.path.join(OUTPUT_DIR, filename)
                 
+                # --- NEW: SKIP IF FILE EXISTS ---
+                if os.path.exists(filepath):
+                    print(f"  Skipping {clean_date} (Already downloaded)")
+                    manifest.append({"date": clean_date, "file": filename})
+                    continue
+                
+                print(f"  Downloading new data for {clean_date}...")
                 if download_data(ds_id, ts, var_name, filepath):
                     manifest.append({"date": clean_date, "file": filename})
-                    print(f"  Saved {clean_date}")
                     time.sleep(1)
 
             if manifest:
                 with open(os.path.join(OUTPUT_DIR, "manifest.json"), "w") as f:
                     json.dump(manifest, f, indent=2)
-                print(f"SUCCESS! Created manifest with {len(manifest)} days.")
-                return 
+                return # Stop after successfully processing a dataset
 
         except Exception as e:
             print(f"  Error: {e}")
@@ -120,5 +125,10 @@ def process_and_save(content, var_name, output_path):
         with open(output_path, "w") as f:
             json.dump(output, f)
 
+# --- UPDATED MAIN BLOCK ---
 if __name__ == "__main__":
-    fetch_history()
+    print("SST Historical Tracker Started.")
+    while True:
+        fetch_history()
+        print(f"Cycle complete. Waiting {INTERVAL_SECONDS // 60} minutes for next check...")
+        time.sleep(INTERVAL_SECONDS)
