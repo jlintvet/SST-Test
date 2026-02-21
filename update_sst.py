@@ -9,13 +9,13 @@ from datetime import datetime
 LAT_MIN, LAT_MAX = 34.0, 37.5
 LON_MIN, LON_MAX = -76.5, -73.0
 OUTPUT_DIR = "historical_data"
-STEP = 4  # Increased step to handle higher frequency data faster
+STEP = 4 
 
-# IDs used by the NOAA CoastWatch "Live" map for 2026
+# These are the "Bulletproof" NRT IDs for the 2026 NOAA Catalog
 DATASETS = [
-    {"id": "noaacwVIIRSj01SSTDaily3P", "name": "VIIRS J01 L3S NRT"},
-    {"id": "noaacwVIIRSnppSSTDaily3P", "name": "VIIRS NPP L3S NRT"},
-    {"id": "noaacwVIIRSj02SSTDaily3P", "name": "VIIRS J02 L3S NRT"}
+    {"id": "noaacwVIIRSnrtDaily", "name": "VIIRS NRT Daily"},
+    {"id": "noaacwNPPVIIRSnrtDaily", "name": "NPP NRT Daily"},
+    {"id": "noaacwNRTswathL2SST", "name": "Direct Swath NRT"}
 ]
 
 if not os.path.exists(OUTPUT_DIR):
@@ -24,70 +24,66 @@ if not os.path.exists(OUTPUT_DIR):
 def fetch_current():
     for ds in DATASETS:
         ds_id = ds["id"]
-        print(f"--- Checking {ds['name']} ---")
+        print(f"--- Attempting: {ds['name']} ({ds_id}) ---")
         
+        # Check the metadata first to see if the dataset exists on this node
+        check_url = f"https://coastwatch.noaa.gov/erddap/info/{ds_id}/index.json"
         try:
-            # We use the .json?time endpoint which is more reliable for NRT
-            time_url = f"https://coastwatch.noaa.gov/erddap/griddap/{ds_id}.json?time"
-            resp = requests.get(time_url, timeout=15)
-            
-            if resp.status_code != 200:
-                print(f"  ID {ds_id} not responsive on this node.")
+            r = requests.get(check_url, timeout=10)
+            if r.status_code != 200:
+                print(f"  [!] ID not found on this node. Moving to next...")
                 continue
-
-            # Get the very last timestamp in the array
-            all_times = resp.json()['table']['rows']
-            latest_ts = all_times[-1][0]
+            
+            # If we reach here, the dataset IS on the server.
+            # Now get the latest time.
+            time_url = f"https://coastwatch.noaa.gov/erddap/griddap/{ds_id}.json?time"
+            t_resp = requests.get(time_url, timeout=10)
+            latest_ts = t_resp.json()['table']['rows'][-1][0]
             clean_date = latest_ts.split('T')[0]
             
-            print(f"  Server reports latest data: {latest_ts}")
+            print(f"  Found Live Data: {latest_ts}")
 
-            # Check if we already processed this specific date/time
-            # Using timestamp in filename to allow multiple updates per day
+            # Check if we already have this specific timestamp
             safe_ts = latest_ts.replace(":", "-").replace("Z", "")
             filepath = os.path.join(OUTPUT_DIR, f"sst_{safe_ts}.json")
-            
             if os.path.exists(filepath):
-                print(f"  Snapshot {latest_ts} already exists. Skipping.")
-                continue
+                print(f"  Data for {latest_ts} already saved locally.")
+                return # Stop, we are current
 
-            # Get variable name
-            info_url = f"https://coastwatch.noaa.gov/erddap/info/{ds_id}/index.json"
-            info_resp = requests.get(info_url, timeout=10)
-            rows = info_resp.json()['table']['rows']
-            var_names = [row[1] for row in rows if row[0] == 'variable']
-            var_name = next((v for v in ["sea_surface_temperature", "sst", "analysed_sst"] if v in var_names), "sst")
+            # Determine Variable Name
+            rows = r.json()['table']['rows']
+            var_name = next((row[1] for row in rows if row[0] == 'variable' and row[1] in ["sea_surface_temperature", "sst", "analysed_sst"]), "sst")
 
-            print(f"  Downloading fresh swath: {latest_ts}...")
-            url = (f"https://coastwatch.noaa.gov/erddap/griddap/{ds_id}.nc?"
-                   f"{var_name}[({latest_ts})][({LAT_MAX}):({LAT_MIN})][({LON_MIN}):({LON_MAX})]")
+            # Download .nc
+            print(f"  Downloading {clean_date}...")
+            dl_url = (f"https://coastwatch.noaa.gov/erddap/griddap/{ds_id}.nc?"
+                      f"{var_name}[({latest_ts})][({LAT_MAX}):({LAT_MIN})][({LON_MIN}):({LON_MAX})]")
             
-            data_resp = requests.get(url, timeout=60)
+            data_resp = requests.get(dl_url, timeout=60)
             if data_resp.status_code == 200:
-                process_data(data_resp.content, var_name, filepath)
-                print(f"  SUCCESS: {latest_ts} saved.")
-                return 
-            else:
-                print(f"  Server error {data_resp.status_code} on download.")
-
+                process_and_save(data_resp.content, var_name, filepath)
+                print(f"  SUCCESS: Saved {latest_ts}")
+                
+                # Update a 'latest.json' for your frontend
+                with open(os.path.join(OUTPUT_DIR, "latest_status.json"), "w") as f:
+                    json.dump({"last_updated": latest_ts, "file": f"sst_{safe_ts}.json"}, f)
+                return
+                
         except Exception as e:
-            print(f"  Error: {e}")
+            print(f"  Connection error or timeout: {e}")
 
-def process_data(content, var_name, output_path):
+def process_and_save(content, var_name, output_path):
     with Dataset("memory", memory=content) as ds:
-        lats = ds.variables['latitude'][:]
-        lons = ds.variables['longitude'][:]
-        
-        # Level 2/3S data often has a 'time' dimension we need to squeeze
+        lats = ds.variables['latitude'][::STEP]
+        lons = ds.variables['longitude'][::STEP]
         data = ds.variables[var_name][:]
-        if data.ndim == 3:
-            data = np.squeeze(data[0, :, :])
-            
-        # Apply stepping for performance
-        lats = lats[::STEP]
-        lons = lons[::STEP]
-        data = data[::STEP, ::STEP]
         
+        # Handle 3D (time, lat, lon) or 2D (lat, lon)
+        if data.ndim == 3:
+            data = np.squeeze(data[0, ::STEP, ::STEP])
+        else:
+            data = data[::STEP, ::STEP]
+            
         units = ds.variables[var_name].units
         is_kelvin = "K" in units.upper()
         temp_c = (data - 273.15) if is_kelvin else data
@@ -100,7 +96,7 @@ def process_data(content, var_name, output_path):
         for i, j in zip(idx_lats, idx_lons):
             features.append({
                 "type": "Feature",
-                "geometry": {"type": "Point", "coordinates": [round(float(lons[j]), 4), round(float(lats[i]) , 4)]},
+                "geometry": {"type": "Point", "coordinates": [round(float(lons[j]), 4), round(float(lats[i]), 4)]},
                 "properties": {"t": round(float(temp_f[i, j]), 1)}
             })
 
