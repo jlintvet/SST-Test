@@ -10,8 +10,8 @@ LAT_MIN, LAT_MAX = 34.0, 37.5
 LON_MIN, LON_MAX = -76.5, -73.0
 OUTPUT_DIR = "historical_data"
 STEP = 4 
+LOOKBACK_DAYS = 5  # How many recent days to check for gaps
 
-# Primary 2026 NRT IDs
 DATASETS = [
     {"id": "noaa_coastwatch_acspo_v2_nrt", "name": "ACSPO NRT Global"},
     {"id": "noaacwBLENDEDsstDNDaily", "name": "Geo-Polar Blended NRT"},
@@ -24,66 +24,55 @@ if not os.path.exists(OUTPUT_DIR):
     os.makedirs(OUTPUT_DIR)
 
 def update_manifest():
-    """Scans the directory and updates manifest.json with all available files."""
-    files = [f for f in os.listdir(OUTPUT_DIR) if f.startswith("sst_") and f.endswith(".json")]
-    manifest = []
-    
-    # Sort files so the newest data is at the end (or beginning)
-    files.sort()
-    
-    for f in files:
-        # Extract the date/time string from the filename
-        # sst_2026-02-21.json -> 2026-02-21
-        date_part = f.replace("sst_", "").replace(".json", "")
-        manifest.append({
-            "date": date_part,
-            "file": f
-        })
-    
-    manifest_path = os.path.join(OUTPUT_DIR, "manifest.json")
-    with open(manifest_path, "w") as f:
+    files = sorted([f for f in os.listdir(OUTPUT_DIR) if f.startswith("sst_") and f.endswith(".json")])
+    manifest = [{"date": f.replace("sst_", "").replace(".json", ""), "file": f} for f in files]
+    with open(os.path.join(OUTPUT_DIR, "manifest.json"), "w") as f:
         json.dump(manifest, f, indent=2)
     print(f"--- Manifest Updated: {len(manifest)} files indexed ---")
 
-def fetch_current():
+def fetch_history():
+    """Checks for any missing days in the recent lookback window."""
     for node in NODES:
         for ds in DATASETS:
             ds_id = ds["id"]
-            print(f"--- Checking {ds['name']} on {node.split('//')[1].split('.')[0]} ---")
+            print(f"--- Scanning {ds['name']} for missing days ---")
             
             try:
+                # 1. Get the list of available times
                 time_url = f"{node}/griddap/{ds_id}.json?time"
                 t_resp = requests.get(time_url, timeout=15)
                 if t_resp.status_code != 200: continue
 
-                latest_ts = t_resp.json()['table']['rows'][-1][0]
-                clean_date = latest_ts.split('T')[0]
-                
-                # Check if we have this specific file
-                # Use simple date for daily, or full TS for hourly
-                filename = f"sst_{clean_date}.json"
-                filepath = os.path.join(OUTPUT_DIR, filename)
-                
-                if os.path.exists(filepath):
-                    print(f"  {clean_date} already exists. Skipping download.")
-                    continue
+                # Get the last few timestamps from the server
+                available_timestamps = [row[0] for row in t_resp.json()['table']['rows']]
+                recent_timestamps = available_timestamps[-LOOKBACK_DAYS:]
 
-                # Get variable and download
+                # 2. Identify the variable name once per dataset
                 info_url = f"{node}/info/{ds_id}/index.json"
                 rows = requests.get(info_url, timeout=10).json()['table']['rows']
                 var_name = next((r[1] for r in rows if r[0] == 'variable' and r[1] in ["sea_surface_temperature", "sst"]), "sst")
 
-                dl_url = (f"{node}/griddap/{ds_id}.nc?"
-                          f"{var_name}[({latest_ts})][({LAT_MAX}):({LAT_MIN})][({LON_MIN}):({LON_MAX})]")
+                for ts in recent_timestamps:
+                    clean_date = ts.split('T')[0]
+                    filename = f"sst_{clean_date}.json"
+                    filepath = os.path.join(OUTPUT_DIR, filename)
+
+                    if os.path.exists(filepath):
+                        # print(f"  {clean_date} exists.")
+                        continue
+
+                    print(f"  Gap detected! Downloading {clean_date} from {ds['name']}...")
+                    dl_url = (f"{node}/griddap/{ds_id}.nc?"
+                              f"{var_name}[({ts})][({LAT_MAX}):({LAT_MIN})][({LON_MIN}):({LON_MAX})]")
+                    
+                    data_resp = requests.get(dl_url, timeout=60)
+                    if data_resp.status_code == 200:
+                        process_and_save(data_resp.content, var_name, filepath)
+                        print(f"  SUCCESS: Filled gap for {clean_date}")
                 
-                data_resp = requests.get(dl_url, timeout=60)
-                if data_resp.status_code == 200:
-                    process_and_save(data_resp.content, var_name, filepath)
-                    print(f"  SUCCESS: Saved {clean_date}")
-                    return True
-                
-            except: continue
-    return False
+            except Exception as e:
+                # print(f"  Skipping {ds_id} on this node.")
+                continue
 
 def process_and_save(content, var_name, output_path):
     with Dataset("memory", memory=content) as ds:
@@ -108,6 +97,5 @@ def process_and_save(content, var_name, output_path):
             json.dump({"type": "FeatureCollection", "features": features}, f)
 
 if __name__ == "__main__":
-    did_download = fetch_current()
-    # Always update the manifest so it reflects the current state of the folder
+    fetch_history()
     update_manifest()
