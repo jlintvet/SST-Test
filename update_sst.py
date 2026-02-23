@@ -5,9 +5,10 @@ from netCDF4 import Dataset
 import os
 import matplotlib.pyplot as plt
 
-# --- FIXED COORDINATES: NC OFFSHORE & GULF STREAM CORE ---
-LAT_MIN, LAT_MAX = 33.5, 36.8   # North from Cape Lookout through Hatteras to Oregon Inlet
-LON_MIN, LON_MAX = -76.5, -72.5  # West to East capturing the Shelf Break and Stream
+# --- COORDINATES: NC OFFSHORE & GULF STREAM CORE ---
+# This centers the crop from Cape Lookout/Hatteras up to Oregon Inlet.
+LAT_MIN, LAT_MAX = 33.5, 36.8   
+LON_MIN, LON_MAX = -76.5, -72.5  
 OUTPUT_DIR = "historical_data"
 LOOKBACK_DAYS = 5 
 
@@ -23,6 +24,7 @@ if not os.path.exists(OUTPUT_DIR):
     os.makedirs(OUTPUT_DIR)
 
 def update_manifest():
+    """Groups all processed files by date for the web frontend."""
     meta_files = [f for f in os.listdir(OUTPUT_DIR) if f.startswith("meta_") and f.endswith(".json")]
     manifest_data = {}
     for f in sorted(meta_files):
@@ -41,73 +43,21 @@ def update_manifest():
     print(f"--- Manifest Updated: {len(meta_files)} images indexed ---")
 
 def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_name):
+    """Processes NetCDF, handles orientation flip, and saves transparent PNG."""
     try:
         with Dataset("memory", memory=content) as ds:
+            # Flexible search for the temperature variable
             possible_vars = [var_name, "sea_surface_temperature", "sst", "analysed_sst"]
             target_var = next((v for v in possible_vars if v in ds.variables), None)
             
-            if not target_var: return
+            if not target_var:
+                print(f"      Error: Variable not found in {ds_id}")
+                return
 
             data = np.squeeze(ds.variables[target_var][:])
-            # Fixed the syntax error here
             if data.ndim == 3: 
                 data = data[0, :, :]
             
+            # Unit Conversion to Fahrenheit
             units = ds.variables[target_var].units if hasattr(ds.variables[target_var], 'units') else "K"
-            temp_f = ((data - 273.15) * 1.8 + 32) if "K" in units.upper() else (data * 1.8 + 32)
-
-            # Transparency Mask for Land/Clouds
-            masked_temp = np.ma.masked_where(~np.isfinite(temp_f) | (temp_f < 30) | (temp_f > 100), temp_f)
-
-            png_filename = f"{base_name}.png"
-            png_path = os.path.join(OUTPUT_DIR, png_filename)
-            
-            # --- HIGH CONTRAST SETTINGS (58°F - 82°F) ---
-            plt.imsave(png_path, masked_temp, vmin=58, vmax=82, cmap='jet', origin='upper')
-
-            meta = {
-                "date": ts.split('T')[0],
-                "timestamp": ts,
-                "ds_id": ds_id,
-                "ds_name": ds_display_name,
-                "image": png_filename,
-                "bounds": [[LAT_MIN, LON_MIN], [LAT_MAX, LON_MAX]]
-            }
-            
-            with open(os.path.join(OUTPUT_DIR, f"meta_{base_name}.json"), "w", encoding="utf-8") as f:
-                json.dump(meta, f, indent=2)
-            print(f"    SUCCESS: Saved {png_filename}")
-    except Exception as e:
-        print(f"      Error processing {ds_id}: {e}")
-
-def fetch_history():
-    for node in NODES:
-        for ds in DATASETS:
-            ds_id, ds_name = ds["id"], ds["name"]
-            lookback = 10 if "BLENDED" in ds_id else LOOKBACK_DAYS
-            print(f"--- Scanning {ds_name} ---")
-            try:
-                t_resp = requests.get(f"{node}/griddap/{ds_id}.json?time", timeout=30)
-                if t_resp.status_code != 200: continue
-                recent_ts = [row[0] for row in t_resp.json()['table']['rows']][-lookback:]
-
-                for ts in recent_ts:
-                    clean_ts = ts.replace(":", "").replace("-", "").replace("Z", "")
-                    base_name = f"sst_{ds_id}_{clean_ts}"
-                    if os.path.exists(os.path.join(OUTPUT_DIR, f"{base_name}.png")): continue
-
-                    print(f"  Downloading {ts}...")
-                    info = requests.get(f"{node}/info/{ds_id}/index.json", timeout=20).json()
-                    var_name = next((r[1] for r in info['table']['rows'] if r[0] == 'variable' and r[1] in ["sea_surface_temperature", "sst", "analysed_sst"]), "sst")
-
-                    # LATITUDE FIX: Min to Max prevents vertical flip
-                    dl_url = f"{node}/griddap/{ds_id}.nc?{var_name}[({ts})][({LAT_MIN}):({LAT_MAX})][({LON_MIN}):({LON_MAX})]"
-                    data_resp = requests.get(dl_url, timeout=120)
-                    if data_resp.status_code == 200:
-                        process_and_save_raster(data_resp.content, var_name, base_name, ts, ds_id, ds_name)
-            except Exception as e:
-                print(f"  Error: {e}")
-
-if __name__ == "__main__":
-    fetch_history()
-    update_manifest()
+            temp_f = ((data
