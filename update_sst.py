@@ -64,4 +64,20 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
             if not target_var: return
 
             data = np.squeeze(ds.variables[target_var][:])
-            if data.ndim == 3: data
+            if data.ndim == 3: 
+                data = data[0, :, :]
+            
+            units = ds.variables[target_var].units if hasattr(ds.variables[target_var], 'units') else "K"
+            temp_f = ((data - 273.15) * 1.8 + 32) if "K" in units.upper() else (data * 1.8 + 32)
+
+            # FLIP FIX: Ensure North is Up
+            data_fixed = np.flipud(temp_f)
+
+            # Apply mask for land and cloud noise
+            masked_temp = np.ma.masked_where(~np.isfinite(data_fixed) | (data_fixed < 30) | (data_fixed > 100), data_fixed)
+
+            png_filename = f"{base_name}.png"
+            png_path = os.path.join(OUTPUT_DIR, png_filename)
+            
+            # HIGH CONTRAST (58-82F)
+            plt.imsave(png_path, masked_temp, vmin=58, vmax=82, cmap='jet', origin='
