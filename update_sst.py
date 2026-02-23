@@ -70,7 +70,7 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
             units = ds.variables[target_var].units if hasattr(ds.variables[target_var], 'units') else "K"
             temp_f = ((data - 273.15) * 1.8 + 32) if "K" in units.upper() else (data * 1.8 + 32)
 
-            # FLIP FIX: Ensure North is Up
+            # FLIP FIX: Flip numerical array so North (top) is index 0
             data_fixed = np.flipud(temp_f)
 
             masked_temp = np.ma.masked_where(~np.isfinite(data_fixed) | (data_fixed < 30) | (data_fixed > 100), data_fixed)
@@ -84,33 +84,4 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
             meta = {
                 "date": ts.split('T')[0],
                 "timestamp": ts,
-                "ds_id": ds_id,
-                "ds_name": ds_display_name,
-                "image": png_filename,
-                "bounds": [[LAT_MIN, LON_MIN], [LAT_MAX, LON_MAX]]
-            }
-            with open(os.path.join(OUTPUT_DIR, f"meta_{base_name}.json"), "w", encoding="utf-8") as f:
-                json.dump(meta, f, indent=2)
-            print(f"    SUCCESS: Saved {png_filename}")
-    except Exception as e:
-        print(f"      Error in processing: {e}")
-
-def fetch_history():
-    for node in NODES:
-        for ds in DATASETS:
-            ds_id, ds_name = ds["id"], ds["name"]
-            lookback = 10 if "BLENDED" in ds_id else LOOKBACK_DAYS
-            print(f"--- Scanning {ds_name} ---")
-            try:
-                t_url = f"{node}/griddap/{ds_id}.json?time"
-                t_resp = requests.get(t_url, timeout=30)
-                if t_resp.status_code != 200: continue
-                recent_ts = [row[0] for row in t_resp.json()['table']['rows']][-lookback:]
-
-                for ts in recent_ts:
-                    clean_ts = ts.replace(":", "").replace("-", "").replace("Z", "")
-                    base_name = f"sst_{ds_id}_{clean_ts}"
-                    if os.path.exists(os.path.join(OUTPUT_DIR, f"{base_name}.png")): continue
-
-                    print(f"  Downloading {ts}...")
-                    i_url = f
+                "ds_id":
