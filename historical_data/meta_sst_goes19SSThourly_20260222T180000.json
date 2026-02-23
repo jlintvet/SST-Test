@@ -1,0 +1,17 @@
+{
+  "date": "2026-02-22",
+  "timestamp": "2026-02-22T18:00:00Z",
+  "ds_id": "goes19SSThourly",
+  "ds_name": "GOES-19 Hourly",
+  "image": "sst_goes19SSThourly_20260222T180000.png",
+  "bounds": [
+    [
+      34.0,
+      -76.5
+    ],
+    [
+      37.5,
+      -73.0
+    ]
+  ]
+}
