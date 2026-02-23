@@ -58,16 +58,17 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
             if data.ndim == 3: data = data[0, :, :]
             
             units = ds.variables[var_name].units
+            # Convert to Fahrenheit
             temp_f = ((data - 273.15) * 1.8 + 32) if "K" in units.upper() else (data * 1.8 + 32)
 
-            # Create transparency mask for invalid data/clouds
+            # Masking for transparency: invalid pixels, land, and extreme temps
             masked_temp = np.ma.masked_where(~np.isfinite(temp_f) | (temp_f < 35) | (temp_f > 95), temp_f)
 
             vmin, vmax = 45, 85
             png_filename = f"{base_name}.png"
             png_path = os.path.join(OUTPUT_DIR, png_filename)
 
-            # FIXED: Parenthesis properly closed
+            # Save as PNG with alpha channel (transparency)
             plt.imsave(png_path, masked_temp, vmin=vmin, vmax=vmax, cmap='jet', origin='upper')
 
             meta = {
@@ -87,7 +88,7 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
         print(f"      Error processing {ds_id}: {e}")
 
 def fetch_history():
-    """Pulls data from all sources to ensure UI has both Blended and Hourly options."""
+    """Pulls recent data from all sources to allow dataset toggling in UI."""
     for node in NODES:
         for ds in DATASETS:
             ds_id, ds_display_name = ds["id"], ds["name"]
@@ -117,11 +118,12 @@ def fetch_history():
                     
                     data_resp = requests.get(dl_url, timeout=120)
                     if data_resp.status_code == 200:
-                        # FIXED: base_name used consistently
                         process_and_save_raster(data_resp.content, var_name, base_name, ts, ds_id, ds_display_name)
                         print(f"    SUCCESS: Saved {base_name}.png")
             
             except Exception as e:
                 print(f"  Error: {e}")
 
-if
+if __name__ == "__main__":
+    fetch_history()
+    update_manifest()
