@@ -64,8 +64,4 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
             if not target_var: return
 
             data = np.squeeze(ds.variables[target_var][:])
-            if data.ndim == 3: data = data[0, :, :]
-            
-            units = ds.variables[target_var].units if hasattr(ds.variables[target_var], 'units') else "K"
-            # Fixed the syntax here:
-            temp_f = ((data - 273.15) * 1.8 + 32) if "K" in units.upper() else
+            if data.ndim == 3: data
