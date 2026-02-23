@@ -67,5 +67,61 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
             png_filename = f"{base_name}.png"
             png_path = os.path.join(OUTPUT_DIR, png_filename)
 
-            # Save as PNG with transparency
-            plt.imsave(png_path, masked_temp, vmin=vmin, vmax=vmax, cmap='jet',
+            # FIXED: Parenthesis properly closed
+            plt.imsave(png_path, masked_temp, vmin=vmin, vmax=vmax, cmap='jet', origin='upper')
+
+            meta = {
+                "date": ts.split('T')[0],
+                "timestamp": ts,
+                "ds_id": ds_id,
+                "ds_name": ds_display_name,
+                "image": png_filename,
+                "bounds": [[LAT_MIN, LON_MIN], [LAT_MAX, LON_MAX]]
+            }
+            
+            meta_path = os.path.join(OUTPUT_DIR, f"meta_{base_name}.json")
+            with open(meta_path, "w", encoding="utf-8") as f:
+                json.dump(meta, f, indent=2)
+
+    except Exception as e:
+        print(f"      Error processing {ds_id}: {e}")
+
+def fetch_history():
+    """Pulls data from all sources to ensure UI has both Blended and Hourly options."""
+    for node in NODES:
+        for ds in DATASETS:
+            ds_id, ds_display_name = ds["id"], ds["name"]
+            print(f"--- Scanning {ds_display_name} ---")
+            try:
+                time_url = f"{node}/griddap/{ds_id}.json?time"
+                t_resp = requests.get(time_url, timeout=30)
+                if t_resp.status_code != 200: continue
+                
+                available_ts = [row[0] for row in t_resp.json()['table']['rows']]
+                recent_ts = available_ts[-LOOKBACK_DAYS:]
+
+                for ts in recent_ts:
+                    clean_ts = ts.replace(":", "").replace("-", "").replace("Z", "")
+                    base_name = f"sst_{ds_id}_{clean_ts}"
+                    
+                    if os.path.exists(os.path.join(OUTPUT_DIR, f"{base_name}.png")):
+                        continue
+
+                    print(f"  Downloading {ts} from {ds_display_name}...")
+                    info_url = f"{node}/info/{ds_id}/index.json"
+                    rows = requests.get(info_url, timeout=20).json()['table']['rows']
+                    var_name = next((r[1] for r in rows if r[0] == 'variable' and r[1] in ["sea_surface_temperature", "sst"]), "sst")
+
+                    dl_url = (f"{node}/griddap/{ds_id}.nc?"
+                              f"{var_name}[({ts})][({LAT_MAX}):({LAT_MIN})][({LON_MIN}):({LON_MAX})]")
+                    
+                    data_resp = requests.get(dl_url, timeout=120)
+                    if data_resp.status_code == 200:
+                        # FIXED: base_name used consistently
+                        process_and_save_raster(data_resp.content, var_name, base_name, ts, ds_id, ds_display_name)
+                        print(f"    SUCCESS: Saved {base_name}.png")
+            
+            except Exception as e:
+                print(f"  Error: {e}")
+
+if
