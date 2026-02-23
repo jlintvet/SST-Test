@@ -24,11 +24,13 @@ if not os.path.exists(OUTPUT_DIR):
     os.makedirs(OUTPUT_DIR)
 
 def update_manifest():
-    """Groups all successful PNGs by date for multi-dataset UI support."""
-    meta_files = sorted([f for f in os.listdir(OUTPUT_DIR) if f.startswith("meta_") and f.endswith(".json")])
+    """Groups ALL successful PNGs by date for multi-dataset UI support."""
+    meta_files = [f for f in os.listdir(OUTPUT_DIR) if f.startswith("meta_") and f.endswith(".json")]
     manifest_data = {}
 
-    for f in meta_files:
+    print(f"DEBUG: Found {len(meta_files)} meta files in {OUTPUT_DIR}")
+
+    for f in sorted(meta_files):
         path = os.path.join(OUTPUT_DIR, f)
         try:
             with open(path, 'r', encoding='utf-8') as jf:
@@ -38,17 +40,19 @@ def update_manifest():
                 if day_key not in manifest_data:
                     manifest_data[day_key] = []
                 
+                # Check for duplicates
                 if not any(item['image'] == meta['image'] for item in manifest_data[day_key]):
                     manifest_data[day_key].append(meta)
-        except Exception:
-            continue
+                    print(f"  Indexed: {meta['image']} for {day_key}")
+        except Exception as e:
+            print(f"  Error indexing {f}: {e}")
 
     manifest_path = os.path.join(OUTPUT_DIR, "manifest.json")
     with open(manifest_path, "w", encoding="utf-8") as f:
         json.dump(manifest_data, f, indent=2)
     
     total_files = sum(len(v) for v in manifest_data.values())
-    print(f"--- Manifest Updated: {total_files} images indexed across {len(manifest_data)} days ---")
+    print(f"--- Manifest Updated: {total_files} images indexed across {len(manifest_data)} unique days ---")
 
 def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_name):
     """Converts NetCDF to a TRANSPARENT PNG."""
