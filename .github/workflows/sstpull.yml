@@ -33,10 +33,9 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          # Force git to see both the PNG images and the metadata/manifest JSONs
+          # IMPORTANT: You must add the PNGs or they will be deleted when the runner shuts down
           git add historical_data/*.json
           git add historical_data/*.png
           
-          # Commit only if there are changes
-          git commit -m "Automated SST Raster Update" || exit 0
+          git commit -m "Added new SST rasters and updated manifest" || exit 0
           git push
