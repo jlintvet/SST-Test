@@ -111,5 +111,195 @@
         ]
       ]
     }
+  ],
+  "2026-02-12": [
+    {
+      "date": "2026-02-12",
+      "timestamp": "2026-02-12T12:00:00Z",
+      "ds_id": "noaacwBLENDEDsstDNDaily",
+      "ds_name": "Geo-Polar Blended NRT",
+      "image": "sst_noaacwBLENDEDsstDNDaily_20260212T120000.png",
+      "bounds": [
+        [
+          34.0,
+          -76.5
+        ],
+        [
+          37.5,
+          -73.0
+        ]
+      ]
+    }
+  ],
+  "2026-02-13": [
+    {
+      "date": "2026-02-13",
+      "timestamp": "2026-02-13T12:00:00Z",
+      "ds_id": "noaacwBLENDEDsstDNDaily",
+      "ds_name": "Geo-Polar Blended NRT",
+      "image": "sst_noaacwBLENDEDsstDNDaily_20260213T120000.png",
+      "bounds": [
+        [
+          34.0,
+          -76.5
+        ],
+        [
+          37.5,
+          -73.0
+        ]
+      ]
+    }
+  ],
+  "2026-02-14": [
+    {
+      "date": "2026-02-14",
+      "timestamp": "2026-02-14T12:00:00Z",
+      "ds_id": "noaacwBLENDEDsstDNDaily",
+      "ds_name": "Geo-Polar Blended NRT",
+      "image": "sst_noaacwBLENDEDsstDNDaily_20260214T120000.png",
+      "bounds": [
+        [
+          34.0,
+          -76.5
+        ],
+        [
+          37.5,
+          -73.0
+        ]
+      ]
+    }
+  ],
+  "2026-02-15": [
+    {
+      "date": "2026-02-15",
+      "timestamp": "2026-02-15T12:00:00Z",
+      "ds_id": "noaacwBLENDEDsstDNDaily",
+      "ds_name": "Geo-Polar Blended NRT",
+      "image": "sst_noaacwBLENDEDsstDNDaily_20260215T120000.png",
+      "bounds": [
+        [
+          34.0,
+          -76.5
+        ],
+        [
+          37.5,
+          -73.0
+        ]
+      ]
+    }
+  ],
+  "2026-02-16": [
+    {
+      "date": "2026-02-16",
+      "timestamp": "2026-02-16T12:00:00Z",
+      "ds_id": "noaacwBLENDEDsstDNDaily",
+      "ds_name": "Geo-Polar Blended NRT",
+      "image": "sst_noaacwBLENDEDsstDNDaily_20260216T120000.png",
+      "bounds": [
+        [
+          34.0,
+          -76.5
+        ],
+        [
+          37.5,
+          -73.0
+        ]
+      ]
+    }
+  ],
+  "2026-02-17": [
+    {
+      "date": "2026-02-17",
+      "timestamp": "2026-02-17T12:00:00Z",
+      "ds_id": "noaacwBLENDEDsstDNDaily",
+      "ds_name": "Geo-Polar Blended NRT",
+      "image": "sst_noaacwBLENDEDsstDNDaily_20260217T120000.png",
+      "bounds": [
+        [
+          34.0,
+          -76.5
+        ],
+        [
+          37.5,
+          -73.0
+        ]
+      ]
+    }
+  ],
+  "2026-02-18": [
+    {
+      "date": "2026-02-18",
+      "timestamp": "2026-02-18T12:00:00Z",
+      "ds_id": "noaacwBLENDEDsstDNDaily",
+      "ds_name": "Geo-Polar Blended NRT",
+      "image": "sst_noaacwBLENDEDsstDNDaily_20260218T120000.png",
+      "bounds": [
+        [
+          34.0,
+          -76.5
+        ],
+        [
+          37.5,
+          -73.0
+        ]
+      ]
+    }
+  ],
+  "2026-02-19": [
+    {
+      "date": "2026-02-19",
+      "timestamp": "2026-02-19T12:00:00Z",
+      "ds_id": "noaacwBLENDEDsstDNDaily",
+      "ds_name": "Geo-Polar Blended NRT",
+      "image": "sst_noaacwBLENDEDsstDNDaily_20260219T120000.png",
+      "bounds": [
+        [
+          34.0,
+          -76.5
+        ],
+        [
+          37.5,
+          -73.0
+        ]
+      ]
+    }
+  ],
+  "2026-02-20": [
+    {
+      "date": "2026-02-20",
+      "timestamp": "2026-02-20T12:00:00Z",
+      "ds_id": "noaacwBLENDEDsstDNDaily",
+      "ds_name": "Geo-Polar Blended NRT",
+      "image": "sst_noaacwBLENDEDsstDNDaily_20260220T120000.png",
+      "bounds": [
+        [
+          34.0,
+          -76.5
+        ],
+        [
+          37.5,
+          -73.0
+        ]
+      ]
+    }
+  ],
+  "2026-02-21": [
+    {
+      "date": "2026-02-21",
+      "timestamp": "2026-02-21T12:00:00Z",
+      "ds_id": "noaacwBLENDEDsstDNDaily",
+      "ds_name": "Geo-Polar Blended NRT",
+      "image": "sst_noaacwBLENDEDsstDNDaily_20260221T120000.png",
+      "bounds": [
+        [
+          34.0,
+          -76.5
+        ],
+        [
+          37.5,
+          -73.0
+        ]
+      ]
+    }
   ]
 }

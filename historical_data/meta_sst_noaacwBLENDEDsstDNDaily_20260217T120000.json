@@ -1,0 +1,17 @@
+{
+  "date": "2026-02-17",
+  "timestamp": "2026-02-17T12:00:00Z",
+  "ds_id": "noaacwBLENDEDsstDNDaily",
+  "ds_name": "Geo-Polar Blended NRT",
+  "image": "sst_noaacwBLENDEDsstDNDaily_20260217T120000.png",
+  "bounds": [
+    [
+      34.0,
+      -76.5
+    ],
+    [
+      37.5,
+      -73.0
+    ]
+  ]
+}
