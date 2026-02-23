@@ -24,10 +24,11 @@ if not os.path.exists(OUTPUT_DIR):
     os.makedirs(OUTPUT_DIR)
 
 def update_manifest():
-    """Groups all available files by date so the UI can reference multiple datasets."""
+    """Groups all successful PNGs by date so the UI can reference multiple snapshots."""
+    # Look for all metadata files generated during the run
     meta_files = sorted([f for f in os.listdir(OUTPUT_DIR) if f.startswith("meta_") and f.endswith(".json")])
     
-    # Structure: { "2026-02-22": [ {dataset1_meta}, {dataset2_meta} ] }
+    # Structure: { "2026-02-22": [ {goes_13:00}, {goes_14:00}, ... ] }
     manifest_data = {}
 
     for f in meta_files:
@@ -40,15 +41,20 @@ def update_manifest():
                 if day_key not in manifest_data:
                     manifest_data[day_key] = []
                 
-                manifest_data[day_key].append(meta)
+                # Check for duplicates before adding to prevent bloat
+                if not any(item['image'] == meta['image'] for item in manifest_data[day_key]):
+                    manifest_data[day_key].append(meta)
         except Exception as e:
-            print(f"Error indexing {f}: {e}")
+            continue
 
-    # Save as a structured dictionary for the app to parse
+    # Write the final grouped manifest
     manifest_path = os.path.join(OUTPUT_DIR, "manifest.json")
     with open(manifest_path, "w", encoding="utf-8") as f:
         json.dump(manifest_data, f, indent=2)
-    print(f"--- Manifest Updated: Data grouped for {len(manifest_data)} unique days ---")
+    
+    # Calculate total count for the log
+    total_files = sum(len(v) for v in manifest_data.values())
+    print(f"--- Manifest Updated: {total_files} images indexed across {len(manifest_data)} days ---")
 
 def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_name):
     """Converts NetCDF to a TRANSPARENT PNG."""
