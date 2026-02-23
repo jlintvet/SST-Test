@@ -63,18 +63,21 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
             temp_f = ((raw_data - 273.15) * 1.8 + 32) if "K" in units.upper() else (raw_data * 1.8 + 32)
 
             # --- SMART ORIENTATION ---
-            # If latitudes go from small to large (33 -> 36), the data is "upside down" for an image.
-            # We flip it so the first row is the highest latitude (North).
+            # If latitudes are ascending (South to North), flip vertically for image coordinates
             if lats[0] < lats[-1]:
                 final_grid = np.flipud(temp_f)
             else:
                 final_grid = temp_f
 
+            # Standard Masking (keeping sensible SST range for filtering noise)
             masked_temp = np.ma.masked_where(~np.isfinite(final_grid) | (final_grid < 30) | (final_grid > 100), final_grid)
+            
             png_filename = f"{base_name}.png"
             png_path = os.path.join(OUTPUT_DIR, png_filename)
             
-            plt.imsave(png_path, masked_temp, vmin=58, vmax=82, cmap='jet', origin='upper')
+            # --- REMOVED VMIN/VMAX ---
+            # Now auto-scales to the data present in the current crop
+            plt.imsave(png_path, masked_temp, cmap='jet', origin='upper')
 
             meta = {
                 "date": ts.split('T')[0],
@@ -86,7 +89,7 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
             }
             with open(os.path.join(OUTPUT_DIR, f"meta_{base_name}.json"), "w", encoding="utf-8") as f:
                 json.dump(meta, f, indent=2)
-            print(f"    FIXED & OVERWRITTEN: {png_filename}")
+            print(f"    RE-PROCESSED: {png_filename}")
 
     except Exception as e:
         print(f"      Error: {e}")
@@ -105,11 +108,8 @@ def fetch_history():
                     clean_ts = ts.replace(":", "").replace("-", "").replace("Z", "")
                     base_name = f"sst_{ds_id}_{clean_ts}"
                     
-                    # --- OVERWRITE ENABLED ---
-                    # We removed the 'if os.path.exists... continue' line.
-                    # This forces the script to re-download and fix the orientation.
-
-                    print(f"  Processing {ts}...")
+                    # Overwrite remains enabled to fix the existing orientation of old files
+                    print(f"  Fetching {ts}...")
                     i_resp = requests.get(f"{node}/info/{ds_id}/index.json", timeout=20)
                     if i_resp.status_code != 200: continue
                     info = i_resp.json()
