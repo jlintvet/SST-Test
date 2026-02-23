@@ -73,11 +73,44 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
             # FLIP FIX: Ensure North is Up
             data_fixed = np.flipud(temp_f)
 
-            # Apply mask for land and cloud noise
             masked_temp = np.ma.masked_where(~np.isfinite(data_fixed) | (data_fixed < 30) | (data_fixed > 100), data_fixed)
 
             png_filename = f"{base_name}.png"
             png_path = os.path.join(OUTPUT_DIR, png_filename)
             
-            # HIGH CONTRAST (58-82F)
-            plt.imsave(png_path, masked_temp, vmin=58, vmax=82, cmap='jet', origin='
+            # Save with 58-82F range and correct vertical orientation
+            plt.imsave(png_path, masked_temp, vmin=58, vmax=82, cmap='jet', origin='upper')
+
+            meta = {
+                "date": ts.split('T')[0],
+                "timestamp": ts,
+                "ds_id": ds_id,
+                "ds_name": ds_display_name,
+                "image": png_filename,
+                "bounds": [[LAT_MIN, LON_MIN], [LAT_MAX, LON_MAX]]
+            }
+            with open(os.path.join(OUTPUT_DIR, f"meta_{base_name}.json"), "w", encoding="utf-8") as f:
+                json.dump(meta, f, indent=2)
+            print(f"    SUCCESS: Saved {png_filename}")
+    except Exception as e:
+        print(f"      Error in processing: {e}")
+
+def fetch_history():
+    for node in NODES:
+        for ds in DATASETS:
+            ds_id, ds_name = ds["id"], ds["name"]
+            lookback = 10 if "BLENDED" in ds_id else LOOKBACK_DAYS
+            print(f"--- Scanning {ds_name} ---")
+            try:
+                t_url = f"{node}/griddap/{ds_id}.json?time"
+                t_resp = requests.get(t_url, timeout=30)
+                if t_resp.status_code != 200: continue
+                recent_ts = [row[0] for row in t_resp.json()['table']['rows']][-lookback:]
+
+                for ts in recent_ts:
+                    clean_ts = ts.replace(":", "").replace("-", "").replace("Z", "")
+                    base_name = f"sst_{ds_id}_{clean_ts}"
+                    if os.path.exists(os.path.join(OUTPUT_DIR, f"{base_name}.png")): continue
+
+                    print(f"  Downloading {ts}...")
+                    i_url = f
