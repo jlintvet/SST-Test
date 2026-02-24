@@ -16,7 +16,9 @@ RETENTION_DAYS = 14
 DATASETS = [
     {"id": "noaacwBLENDEDsstDNDaily", "name": "Geo-Polar Blended NRT"},
     {"id": "noa_coastwatch_acspo_v2_nrt", "name": "ACSPO NRT Global"},
-    {"id": "goes19SSThourly", "name": "GOES-19 Hourly"}
+    {"id": "goes19SSThourly", "name": "GOES-19 Hourly"},
+    {"id": "nesdisVHNSQnrtSST1day", "name": "VIIRS NOAA-20 NRT"},
+    {"id": "nesdisVHNnoaaSQnrtSST1day", "name": "VIIRS Suomi-NPP NRT"},
 ]
 
 NODES = ["https://coastwatch.noaa.gov/erddap", "https://cwcgom.aoml.noaa.gov/erddap"]
@@ -42,10 +44,12 @@ def update_manifest():
             with open(path, 'r', encoding='utf-8') as jf:
                 meta = json.load(jf)
                 day_key = meta["date"]
-                if day_key not in manifest_data: manifest_data[day_key] = []
+                if day_key not in manifest_data:
+                    manifest_data[day_key] = []
                 if not any(item['image'] == meta['image'] for item in manifest_data[day_key]):
                     manifest_data[day_key].append(meta)
-        except: continue
+        except:
+            continue
     with open(os.path.join(OUTPUT_DIR, "manifest.json"), "w", encoding="utf-8") as f:
         json.dump(manifest_data, f, indent=2)
 
@@ -54,30 +58,42 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
         with Dataset("memory", memory=content) as ds:
             possible_vars = [var_name, "sea_surface_temperature", "sst", "analysed_sst"]
             target_var = next((v for v in possible_vars if v in ds.variables), None)
-            if not target_var: return
+            if not target_var:
+                return
 
             raw_data = np.squeeze(ds.variables[target_var][:])
             lats = ds.variables['latitude'][:]
-            
+
             units = ds.variables[target_var].units if hasattr(ds.variables[target_var], 'units') else "K"
             temp_f = ((raw_data - 273.15) * 1.8 + 32) if "K" in units.upper() else (raw_data * 1.8 + 32)
 
-            # --- SMART ORIENTATION ---
-            # If latitudes are ascending (South to North), flip vertically for image coordinates
+            # If latitudes are ascending (South to North), flip for image coordinates
             if lats[0] < lats[-1]:
                 final_grid = np.flipud(temp_f)
             else:
                 final_grid = temp_f
 
-            # Standard Masking (keeping sensible SST range for filtering noise)
-            masked_temp = np.ma.masked_where(~np.isfinite(final_grid) | (final_grid < 30) | (final_grid > 100), final_grid)
-            
-            png_filename = f"{base_name}.png"
-            png_path = os.path.join(OUTPUT_DIR, png_filename)
-            
+            # Mask out invalid and out-of-range values
+            masked_temp = np.ma.masked_where(
+                ~np.isfinite(final_grid) | (final_grid < 30) | (final_grid > 100),
+                final_grid
+            )
+
+            # Calculate min/max from actual data
             valid_data = masked_temp.compressed()
             min_temp = float(np.percentile(valid_data, 2)) if len(valid_data) > 0 else 50.0
             max_temp = float(np.percentile(valid_data, 98)) if len(valid_data) > 0 else 85.0
+
+            png_filename = f"{base_name}.png"
+            png_path = os.path.join(OUTPUT_DIR, png_filename)
+
+            # Save image with correct color scaling and no interpolation blur
+            fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+            ax.imshow(masked_temp, cmap='jet', origin='upper',
+                      interpolation='nearest', vmin=min_temp, vmax=max_temp)
+            ax.axis('off')
+            plt.savefig(png_path, bbox_inches='tight', pad_inches=0, dpi=150)
+            plt.close(fig)
 
             meta = {
                 "date": ts.split('T')[0],
@@ -85,11 +101,13 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
                 "ds_id": ds_id,
                 "ds_name": ds_display_name,
                 "image": png_filename,
-                "bounds": [[LAT_MIN, LON_MIN], [LAT_MAX, LON_MAX]]
+                "bounds": [[LAT_MIN, LON_MIN], [LAT_MAX, LON_MAX]],
+                "min_temp": min_temp,
+                "max_temp": max_temp
             }
             with open(os.path.join(OUTPUT_DIR, f"meta_{base_name}.json"), "w", encoding="utf-8") as f:
                 json.dump(meta, f, indent=2)
-            print(f"    RE-PROCESSED: {png_filename}")
+            print(f"    SAVED: {png_filename} (temps: {min_temp:.1f}F - {max_temp:.1f}F)")
 
     except Exception as e:
         print(f"      Error: {e}")
@@ -98,27 +116,36 @@ def fetch_history():
     for node in NODES:
         for ds in DATASETS:
             ds_id, ds_name = ds["id"], ds["name"]
-            print(f"--- Scanning {ds_name} ---")
+            print(f"--- Scanning {ds_name} on {node} ---")
             try:
                 t_resp = requests.get(f"{node}/griddap/{ds_id}.json?time", timeout=30)
-                if t_resp.status_code != 200: continue
+                if t_resp.status_code != 200:
+                    print(f"  Skipping — status {t_resp.status_code}")
+                    continue
                 recent_ts = [row[0] for row in t_resp.json()['table']['rows']][-LOOKBACK_DAYS:]
 
                 for ts in recent_ts:
                     clean_ts = ts.replace(":", "").replace("-", "").replace("Z", "")
                     base_name = f"sst_{ds_id}_{clean_ts}"
-                    
-                    # Overwrite remains enabled to fix the existing orientation of old files
+
                     print(f"  Fetching {ts}...")
                     i_resp = requests.get(f"{node}/info/{ds_id}/index.json", timeout=20)
-                    if i_resp.status_code != 200: continue
+                    if i_resp.status_code != 200:
+                        continue
                     info = i_resp.json()
-                    var_name = next((r[1] for r in info['table']['rows'] if r[0] == 'variable' and r[1] in ["sea_surface_temperature", "sst", "analysed_sst"]), "sst")
+                    var_name = next(
+                        (r[1] for r in info['table']['rows']
+                         if r[0] == 'variable' and r[1] in ["sea_surface_temperature", "sst", "analysed_sst"]),
+                        "sst"
+                    )
 
                     dl_url = f"{node}/griddap/{ds_id}.nc?{var_name}[({ts})][({LAT_MIN}):({LAT_MAX})][({LON_MIN}):({LON_MAX})]"
                     data_resp = requests.get(dl_url, timeout=120)
                     if data_resp.status_code == 200:
                         process_and_save_raster(data_resp.content, var_name, base_name, ts, ds_id, ds_name)
+                    else:
+                        print(f"    Download failed: {data_resp.status_code}")
+
             except Exception as e:
                 print(f"  Error: {e}")
 
