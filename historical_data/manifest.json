@@ -161,6 +161,23 @@
           -72.5
         ]
       ]
+    },
+    {
+      "date": "2026-02-22",
+      "timestamp": "2026-02-22T12:00:00Z",
+      "ds_id": "noaacwBLENDEDsstDNDaily",
+      "ds_name": "Geo-Polar Blended NRT",
+      "image": "sst_noaacwBLENDEDsstDNDaily_20260222T120000.png",
+      "bounds": [
+        [
+          33.5,
+          -76.5
+        ],
+        [
+          36.8,
+          -72.5
+        ]
+      ]
     }
   ],
   "2026-02-23": [
@@ -340,6 +357,91 @@
       "ds_id": "goes19SSThourly",
       "ds_name": "GOES-19 Hourly",
       "image": "sst_goes19SSThourly_20260223T120000.png",
+      "bounds": [
+        [
+          33.5,
+          -76.5
+        ],
+        [
+          36.8,
+          -72.5
+        ]
+      ]
+    },
+    {
+      "date": "2026-02-23",
+      "timestamp": "2026-02-23T19:00:00Z",
+      "ds_id": "goes19SSThourly",
+      "ds_name": "GOES-19 Hourly",
+      "image": "sst_goes19SSThourly_20260223T190000.png",
+      "bounds": [
+        [
+          33.5,
+          -76.5
+        ],
+        [
+          36.8,
+          -72.5
+        ]
+      ]
+    },
+    {
+      "date": "2026-02-23",
+      "timestamp": "2026-02-23T20:00:00Z",
+      "ds_id": "goes19SSThourly",
+      "ds_name": "GOES-19 Hourly",
+      "image": "sst_goes19SSThourly_20260223T200000.png",
+      "bounds": [
+        [
+          33.5,
+          -76.5
+        ],
+        [
+          36.8,
+          -72.5
+        ]
+      ]
+    },
+    {
+      "date": "2026-02-23",
+      "timestamp": "2026-02-23T21:00:00Z",
+      "ds_id": "goes19SSThourly",
+      "ds_name": "GOES-19 Hourly",
+      "image": "sst_goes19SSThourly_20260223T210000.png",
+      "bounds": [
+        [
+          33.5,
+          -76.5
+        ],
+        [
+          36.8,
+          -72.5
+        ]
+      ]
+    },
+    {
+      "date": "2026-02-23",
+      "timestamp": "2026-02-23T22:00:00Z",
+      "ds_id": "goes19SSThourly",
+      "ds_name": "GOES-19 Hourly",
+      "image": "sst_goes19SSThourly_20260223T220000.png",
+      "bounds": [
+        [
+          33.5,
+          -76.5
+        ],
+        [
+          36.8,
+          -72.5
+        ]
+      ]
+    },
+    {
+      "date": "2026-02-23",
+      "timestamp": "2026-02-23T23:00:00Z",
+      "ds_id": "goes19SSThourly",
+      "ds_name": "GOES-19 Hourly",
+      "image": "sst_goes19SSThourly_20260223T230000.png",
       "bounds": [
         [
           33.5,
