@@ -2,7 +2,7 @@
   "date": "2026-02-19",
   "timestamp": "2026-02-19T12:00:00Z",
   "ds_id": "noaacwBLENDEDsstDNDaily",
-  "ds_name": "Geo-Polar Blended NRT",
+  "ds_name": "Geo-Polar Blended NRT (Day+Night)",
   "image": "sst_noaacwBLENDEDsstDNDaily_20260219T120000.png",
   "bounds": [
     [

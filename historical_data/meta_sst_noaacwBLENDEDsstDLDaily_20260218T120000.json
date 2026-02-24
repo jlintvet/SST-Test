@@ -1,9 +1,9 @@
 {
   "date": "2026-02-18",
   "timestamp": "2026-02-18T12:00:00Z",
-  "ds_id": "noaacwBLENDEDsstDNDaily",
-  "ds_name": "Geo-Polar Blended NRT (Day+Night)",
-  "image": "sst_noaacwBLENDEDsstDNDaily_20260218T120000.png",
+  "ds_id": "noaacwBLENDEDsstDLDaily",
+  "ds_name": "Geo-Polar Blended NRT (Night Only)",
+  "image": "sst_noaacwBLENDEDsstDLDaily_20260218T120000.png",
   "bounds": [
     [
       33.5,
@@ -14,6 +14,6 @@
       -72.5
     ]
   ],
-  "min_temp": 37.37766886329651,
+  "min_temp": 37.215669017791754,
   "max_temp": 73.99398956298828
 }
