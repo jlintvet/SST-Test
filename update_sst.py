@@ -35,12 +35,13 @@ if not os.path.exists(OUTPUT_DIR):
     os.makedirs(OUTPUT_DIR)
 
 def cleanup_old_files():
-    now = time.time()
-    cutoff = now - (RETENTION_DAYS * 86400)
     for f in os.listdir(OUTPUT_DIR):
-        if f.endswith(".png") or f.startswith("meta_"):
-            path = os.path.join(OUTPUT_DIR, f)
-            if os.path.getmtime(path) < cutoff:
+        path = os.path.join(OUTPUT_DIR, f)
+        if f.endswith(".png") or (f.startswith("meta_") and f.endswith(".json")):
+            mtime = os.path.getmtime(path)
+            age_days = (time.time() - mtime) / 86400
+            # Add 1 day buffer for GitHub Actions runner checkout time
+            if age_days > (RETENTION_DAYS + 1):
                 os.remove(path)
                 print(f"  Purged: {f}")
 
@@ -106,7 +107,7 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
             # Save with smooth bilinear interpolation and correct color scaling
             fig, ax = plt.subplots(1, 1, figsize=(10, 10))
             ax.imshow(masked_temp, cmap='jet', origin='upper',
-                      interpolation='linear', vmin=min_temp, vmax=max_temp)
+                      interpolation='bilinear', vmin=min_temp, vmax=max_temp)
             ax.axis('off')
             plt.savefig(png_path, bbox_inches='tight', pad_inches=0, dpi=150)
             plt.close(fig)
@@ -168,13 +169,4 @@ def fetch_history():
 
                 success = True
 
-            except Exception as e:
-                print(f"  Error: {e}")
-
-            if success:
-                break
-
-if __name__ == "__main__":
-    cleanup_old_files()
-    fetch_history()
-    update_manifest()
+            except Excepti
