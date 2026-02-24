@@ -16,27 +16,22 @@ RETENTION_DAYS = 14
 DATASETS = [
     {
         "id": "noaacwBLENDEDsstDNDaily",
-        "name": "Geo-Polar Blended NRT",
+        "name": "Geo-Polar Blended NRT (Day+Night)",
         "nodes": ["https://coastwatch.noaa.gov/erddap", "https://cwcgom.aoml.noaa.gov/erddap"]
     },
     {
-        "id": "noa_coastwatch_acspo_v2_nrt",
-        "name": "ACSPO NRT Global",
+        "id": "noaacwBLENDEDsstDLDaily",
+        "name": "Geo-Polar Blended NRT (Night Only)",
         "nodes": ["https://coastwatch.noaa.gov/erddap"]
     },
     {
-        "id": "goes19SSThourly",
-        "name": "GOES-19 Hourly",
+        "id": "noaacwL3CollatednppC",
+        "name": "VIIRS S-NPP ACSPO 4km Daily",
         "nodes": ["https://coastwatch.noaa.gov/erddap"]
     },
     {
-        "id": "nesdisVHNSQnrtSST1day",
-        "name": "VIIRS NOAA-20 NRT",
-        "nodes": ["https://coastwatch.noaa.gov/erddap"]
-    },
-    {
-        "id": "nesdisVHNnoaaSQnrtSST1day",
-        "name": "VIIRS Suomi-NPP NRT",
+        "id": "noaacrwsstDaily",
+        "name": "CoralTemp 5km Daily",
         "nodes": ["https://coastwatch.noaa.gov/erddap"]
     },
 ]
