@@ -106,7 +106,7 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
             # Save with smooth bilinear interpolation and correct color scaling
             fig, ax = plt.subplots(1, 1, figsize=(10, 10))
             ax.imshow(masked_temp, cmap='jet', origin='upper',
-                      interpolation='bilinear', vmin=min_temp, vmax=max_temp)
+                      interpolation='linear', vmin=min_temp, vmax=max_temp)
             ax.axis('off')
             plt.savefig(png_path, bbox_inches='tight', pad_inches=0, dpi=150)
             plt.close(fig)
