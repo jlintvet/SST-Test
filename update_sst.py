@@ -93,6 +93,8 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
                 final_grid
             )
 
+            print(f"      Native grid shape: {masked_temp.shape} (rows x cols)")
+
             valid_data = masked_temp.compressed()
             if len(valid_data) == 0:
                 print(f"      No valid data found, skipping.")
@@ -103,11 +105,16 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
             png_filename = f"{base_name}.png"
             png_path = os.path.join(OUTPUT_DIR, png_filename)
 
+            # Convert to RGBA with transparency for masked (cloud/land) areas
+            cmap = plt.cm.jet
+            norm = plt.Normalize(vmin=min_temp, vmax=max_temp)
+            rgba = cmap(norm(masked_temp.filled(np.nan)))
+            rgba[..., 3] = np.where(masked_temp.mask, 0, 1)
+
             fig, ax = plt.subplots(1, 1, figsize=(10, 10))
-            ax.imshow(masked_temp, cmap='jet', origin='upper',
-                      interpolation='lanczos', vmin=min_temp, vmax=max_temp)
+            ax.imshow(rgba, origin='upper', interpolation='lanczos')
             ax.axis('off')
-            plt.savefig(png_path, bbox_inches='tight', pad_inches=0, dpi=150)
+            plt.savefig(png_path, bbox_inches='tight', pad_inches=0, dpi=150, transparent=True)
             plt.close(fig)
 
             meta = {
