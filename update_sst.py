@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 import time
 
 # --- COORDINATES: NC OFFSHORE ---
-LAT_MIN, LAT_MAX = 33.5, 36.8   
-LON_MIN, LON_MAX = -76.5, -72.5  
+LAT_MIN, LAT_MAX = 33.5, 36.8
+LON_MIN, LON_MAX = -76.5, -72.5
 OUTPUT_DIR = "historical_data"
 LOOKBACK_DAYS = 5
 RETENTION_DAYS = 5
@@ -34,6 +34,7 @@ DATASETS = [
 if not os.path.exists(OUTPUT_DIR):
     os.makedirs(OUTPUT_DIR)
 
+
 def cleanup_old_files():
     for f in os.listdir(OUTPUT_DIR):
         path = os.path.join(OUTPUT_DIR, f)
@@ -43,6 +44,7 @@ def cleanup_old_files():
             if age_days > (RETENTION_DAYS + 1):
                 os.remove(path)
                 print(f"  Purged: {f}")
+
 
 def update_manifest():
     meta_files = [f for f in os.listdir(OUTPUT_DIR) if f.startswith("meta_") and f.endswith(".json")]
@@ -61,6 +63,7 @@ def update_manifest():
             continue
     with open(os.path.join(OUTPUT_DIR, "manifest.json"), "w", encoding="utf-8") as f:
         json.dump(manifest_data, f, indent=2)
+
 
 def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_name):
     try:
@@ -110,3 +113,73 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
             meta = {
                 "date": ts.split('T')[0],
                 "timestamp": ts,
+                "ds_id": ds_id,
+                "ds_name": ds_display_name,
+                "image": png_filename,
+                "bounds": [[LAT_MIN, LON_MIN], [LAT_MAX, LON_MAX]],
+                "min_temp": min_temp,
+                "max_temp": max_temp
+            }
+            with open(os.path.join(OUTPUT_DIR, f"meta_{base_name}.json"), "w", encoding="utf-8") as f:
+                json.dump(meta, f, indent=2)
+            print(f"    SAVED: {png_filename} (temps: {min_temp:.1f}F - {max_temp:.1f}F)")
+
+    except Exception as e:
+        print(f"      Error: {e}")
+
+
+def fetch_history():
+    for ds in DATASETS:
+        ds_id, ds_name = ds["id"], ds["name"]
+        ds_nodes = ds.get("nodes", ["https://coastwatch.noaa.gov/erddap"])
+        for node in ds_nodes:
+            print(f"--- Scanning {ds_name} on {node} ---")
+            success = False
+            try:
+                t_resp = requests.get(f"{node}/griddap/{ds_id}.json?time", timeout=30)
+                if t_resp.status_code != 200:
+                    print(f"  Skipping — status {t_resp.status_code}")
+                    continue
+
+                recent_ts = [row[0] for row in t_resp.json()['table']['rows']][-LOOKBACK_DAYS:]
+
+                for ts in recent_ts:
+                    clean_ts = ts.replace(":", "").replace("-", "").replace("Z", "")
+                    base_name = f"sst_{ds_id}_{clean_ts}"
+
+                    print(f"  Fetching {ts}...")
+                    i_resp = requests.get(f"{node}/info/{ds_id}/index.json", timeout=20)
+                    if i_resp.status_code != 200:
+                        print(f"    Info fetch failed: {i_resp.status_code}")
+                        continue
+                    info = i_resp.json()
+                    var_name = next(
+                        (r[1] for r in info['table']['rows']
+                         if r[0] == 'variable' and r[1] in ["analysed_sst", "sea_surface_temperature", "sst"]),
+                        "analysed_sst"
+                    )
+
+                    dl_url = (
+                        f"{node}/griddap/{ds_id}.nc"
+                        f"?{var_name}"
+                        f"[({ts})][({LAT_MIN}):({LAT_MAX})][({LON_MIN}):({LON_MAX})]"
+                    )
+                    data_resp = requests.get(dl_url, timeout=120)
+                    if data_resp.status_code == 200:
+                        process_and_save_raster(data_resp.content, var_name, base_name, ts, ds_id, ds_name)
+                    else:
+                        print(f"    Download failed: {data_resp.status_code}")
+
+                success = True
+
+            except Exception as e:
+                print(f"  Error: {e}")
+
+            if success:
+                break
+
+
+if __name__ == "__main__":
+    cleanup_old_files()
+    fetch_history()
+    update_manifest()
