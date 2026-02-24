@@ -1,9 +1,9 @@
 {
   "date": "2026-02-24",
-  "timestamp": "2026-02-24T04:00:00Z",
+  "timestamp": "2026-02-24T07:00:00Z",
   "ds_id": "goes19SSThourly",
   "ds_name": "GOES-19 Hourly",
-  "image": "sst_goes19SSThourly_20260224T040000.png",
+  "image": "sst_goes19SSThourly_20260224T070000.png",
   "bounds": [
     [
       33.5,
@@ -14,6 +14,6 @@
       -72.5
     ]
   ],
-  "min_temp": 37.27400012016297,
-  "max_temp": 69.304638961792
+  "min_temp": 37.32800006866455,
+  "max_temp": 65.29171981048584
 }
