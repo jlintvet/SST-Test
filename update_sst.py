@@ -77,7 +77,11 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
             
             # --- REMOVED VMIN/VMAX ---
             # Now auto-scales to the data present in the current crop
-            plt.imsave(png_path, masked_temp, cmap='jet', origin='upper')
+            fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+            ax.imshow(masked_temp, cmap='jet', origin='upper', interpolation='nearest')
+            ax.axis('off')
+            plt.savefig(png_path, bbox_inches='tight', pad_inches=0, dpi=150)
+            plt.close(fig)
 
             meta = {
                 "date": ts.split('T')[0],
