@@ -5,6 +5,7 @@ from netCDF4 import Dataset
 import os
 import matplotlib.pyplot as plt
 import time
+from scipy.ndimage import gaussian_filter
 
 # --- COORDINATES: NC OFFSHORE ---
 LAT_MIN, LAT_MAX = 33.5, 36.8
@@ -65,6 +66,25 @@ def update_manifest():
         json.dump(manifest_data, f, indent=2)
 
 
+def smooth_masked_array(masked_temp, sigma=1.5):
+    """Smooth data values while preserving mask boundaries cleanly."""
+    # Fill masked values with nearest valid neighbor before smoothing
+    # so gaussian doesn't bleed invalid values into valid areas
+    filled = masked_temp.filled(np.nan)
+    mask = masked_temp.mask if np.ma.is_masked(masked_temp) else np.zeros(filled.shape, dtype=bool)
+
+    # Replace NaNs with local mean for smoothing purposes only
+    nan_mask = np.isnan(filled)
+    filled_for_smooth = filled.copy()
+    filled_for_smooth[nan_mask] = np.nanmean(filled)
+
+    # Apply gaussian smooth to data values only
+    smoothed = gaussian_filter(filled_for_smooth, sigma=sigma)
+
+    # Re-apply the original mask so boundaries stay sharp
+    return np.ma.masked_where(mask | nan_mask, smoothed)
+
+
 def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_name):
     try:
         with Dataset("memory", memory=content) as ds:
@@ -102,17 +122,23 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
             min_temp = float(np.percentile(valid_data, 2))
             max_temp = float(np.percentile(valid_data, 98))
 
+            # Smooth data values while keeping mask boundaries clean
+            smoothed_temp = smooth_masked_array(masked_temp, sigma=1.5)
+
             png_filename = f"{base_name}.png"
             png_path = os.path.join(OUTPUT_DIR, png_filename)
 
             # Convert to RGBA with transparency for masked (cloud/land) areas
             cmap = plt.cm.jet
             norm = plt.Normalize(vmin=min_temp, vmax=max_temp)
-            rgba = cmap(norm(masked_temp.filled(np.nan)))
-            rgba[..., 3] = np.where(masked_temp.mask, 0, 1)
+            rgba = cmap(norm(smoothed_temp.filled(np.nan)))
+
+            # Set alpha: 0 (transparent) where masked, 1 (opaque) where valid
+            mask = smoothed_temp.mask if np.ma.is_masked(smoothed_temp) else np.zeros(smoothed_temp.shape, dtype=bool)
+            rgba[..., 3] = np.where(mask, 0, 1)
 
             fig, ax = plt.subplots(1, 1, figsize=(10, 10))
-            ax.imshow(rgba, origin='upper', interpolation='lanczos')
+            ax.imshow(rgba, origin='upper', interpolation='nearest')
             ax.axis('off')
             plt.savefig(png_path, bbox_inches='tight', pad_inches=0, dpi=150, transparent=True)
             plt.close(fig)
