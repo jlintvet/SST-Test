@@ -75,9 +75,9 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
             png_filename = f"{base_name}.png"
             png_path = os.path.join(OUTPUT_DIR, png_filename)
             
-            # --- REMOVED VMIN/VMAX ---
-            # Now auto-scales to the data present in the current crop
-            plt.imsave(png_path, masked_temp, cmap='jet', origin='upper')
+            valid_data = masked_temp.compressed()
+            min_temp = float(np.percentile(valid_data, 2)) if len(valid_data) > 0 else 50.0
+            max_temp = float(np.percentile(valid_data, 98)) if len(valid_data) > 0 else 85.0
 
             meta = {
                 "date": ts.split('T')[0],
