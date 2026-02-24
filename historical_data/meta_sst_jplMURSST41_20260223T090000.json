@@ -1,0 +1,19 @@
+{
+  "date": "2026-02-23",
+  "timestamp": "2026-02-23T09:00:00Z",
+  "ds_id": "jplMURSST41",
+  "ds_name": "MUR SST 1km Daily (NASA JPL)",
+  "image": "sst_jplMURSST41_20260223T090000.png",
+  "bounds": [
+    [
+      33.5,
+      -76.5
+    ],
+    [
+      36.8,
+      -72.5
+    ]
+  ],
+  "min_temp": 44.7584,
+  "max_temp": 72.8168
+}
