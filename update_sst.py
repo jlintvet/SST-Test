@@ -16,17 +16,17 @@ RETENTION_DAYS = 5
 DATASETS = [
     {
         "id": "noaacwBLENDEDsstDNDaily",
-        "name": "Geo-Polar Blended NRT (Day+Night)",
-        "nodes": ["https://coastwatch.noaa.gov/erddap", "https://cwcgom.aoml.noaa.gov/erddap"]
+        "name": "Geo-Polar Blended 5km (Gap-Free)",
+        "nodes": ["https://coastwatch.noaa.gov/erddap"]
     },
     {
-        "id": "noaacrwsstDaily",
-        "name": "CoralTemp 5km Daily",
+        "id": "noaacwLEOACSPOSSTL3SnrtKDaily",
+        "name": "VIIRS+AVHRR Super-Collated 2km",
         "nodes": ["https://coastwatch.noaa.gov/erddap"]
     },
     {
         "id": "jplMURSST41",
-        "name": "MUR SST 1km Daily (NASA JPL)",
+        "name": "MUR SST 1km (Highest Resolution)",
         "nodes": ["https://coastwatch.pfeg.noaa.gov/erddap"]
     },
 ]
@@ -80,16 +80,19 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
             else:
                 temp_f = raw_data * 1.8 + 32
 
+            # If latitudes are ascending (South to North), flip for image coordinates
             if lats[0] < lats[-1]:
                 final_grid = np.flipud(temp_f)
             else:
                 final_grid = temp_f
 
+            # Mask out invalid and out-of-range values
             masked_temp = np.ma.masked_where(
                 ~np.isfinite(final_grid) | (final_grid < 30) | (final_grid > 100),
                 final_grid
             )
 
+            # Calculate min/max from actual data
             valid_data = masked_temp.compressed()
             if len(valid_data) == 0:
                 print(f"      No valid data found, skipping.")
@@ -100,9 +103,10 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
             png_filename = f"{base_name}.png"
             png_path = os.path.join(OUTPUT_DIR, png_filename)
 
+            # Save with smooth bilinear interpolation and correct color scaling
             fig, ax = plt.subplots(1, 1, figsize=(10, 10))
             ax.imshow(masked_temp, cmap='jet', origin='upper',
-                      interpolation='bicubic', vmin=min_temp, vmax=max_temp)
+                      interpolation='bilinear', vmin=min_temp, vmax=max_temp)
             ax.axis('off')
             plt.savefig(png_path, bbox_inches='tight', pad_inches=0, dpi=150)
             plt.close(fig)
