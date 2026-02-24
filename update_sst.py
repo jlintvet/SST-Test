@@ -10,8 +10,8 @@ import time
 LAT_MIN, LAT_MAX = 33.5, 36.8   
 LON_MIN, LON_MAX = -76.5, -72.5  
 OUTPUT_DIR = "historical_data"
-LOOKBACK_DAYS = 5 
-RETENTION_DAYS = 14 
+LOOKBACK_DAYS = 5
+RETENTION_DAYS = 5
 
 DATASETS = [
     {
@@ -42,6 +42,7 @@ def cleanup_old_files():
             path = os.path.join(OUTPUT_DIR, f)
             if os.path.getmtime(path) < cutoff:
                 os.remove(path)
+                print(f"  Purged: {f}")
 
 def update_manifest():
     meta_files = [f for f in os.listdir(OUTPUT_DIR) if f.startswith("meta_") and f.endswith(".json")]
@@ -77,22 +78,18 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
             if "K" in units.upper():
                 temp_f = (raw_data - 273.15) * 1.8 + 32
             else:
-                # Assume Celsius
                 temp_f = raw_data * 1.8 + 32
 
-            # If latitudes are ascending (South to North), flip for image coordinates
             if lats[0] < lats[-1]:
                 final_grid = np.flipud(temp_f)
             else:
                 final_grid = temp_f
 
-            # Mask out invalid and out-of-range values
             masked_temp = np.ma.masked_where(
                 ~np.isfinite(final_grid) | (final_grid < 30) | (final_grid > 100),
                 final_grid
             )
 
-            # Calculate min/max from actual data
             valid_data = masked_temp.compressed()
             if len(valid_data) == 0:
                 print(f"      No valid data found, skipping.")
@@ -103,7 +100,6 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
             png_filename = f"{base_name}.png"
             png_path = os.path.join(OUTPUT_DIR, png_filename)
 
-            # Save with smooth bilinear interpolation and correct color scaling
             fig, ax = plt.subplots(1, 1, figsize=(10, 10))
             ax.imshow(masked_temp, cmap='jet', origin='upper',
                       interpolation='bilinear', vmin=min_temp, vmax=max_temp)
@@ -134,6 +130,7 @@ def fetch_history():
         ds_nodes = ds.get("nodes", ["https://coastwatch.noaa.gov/erddap"])
         for node in ds_nodes:
             print(f"--- Scanning {ds_name} on {node} ---")
+            success = False
             try:
                 t_resp = requests.get(f"{node}/griddap/{ds_id}.json?time", timeout=30)
                 if t_resp.status_code != 200:
@@ -165,4 +162,15 @@ def fetch_history():
                     else:
                         print(f"    Download failed: {data_resp.status_code}")
 
-                # Successfully fetched from
+                success = True
+
+            except Exception as e:
+                print(f"  Error: {e}")
+
+            if success:
+                break
+
+if __name__ == "__main__":
+    cleanup_old_files()
+    fetch_history()
+    update_manifest()
