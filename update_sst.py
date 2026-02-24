@@ -40,7 +40,6 @@ def cleanup_old_files():
         if f.endswith(".png") or (f.startswith("meta_") and f.endswith(".json")):
             mtime = os.path.getmtime(path)
             age_days = (time.time() - mtime) / 86400
-            # Add 1 day buffer for GitHub Actions runner checkout time
             if age_days > (RETENTION_DAYS + 1):
                 os.remove(path)
                 print(f"  Purged: {f}")
@@ -81,19 +80,16 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
             else:
                 temp_f = raw_data * 1.8 + 32
 
-            # If latitudes are ascending (South to North), flip for image coordinates
             if lats[0] < lats[-1]:
                 final_grid = np.flipud(temp_f)
             else:
                 final_grid = temp_f
 
-            # Mask out invalid and out-of-range values
             masked_temp = np.ma.masked_where(
                 ~np.isfinite(final_grid) | (final_grid < 30) | (final_grid > 100),
                 final_grid
             )
 
-            # Calculate min/max from actual data
             valid_data = masked_temp.compressed()
             if len(valid_data) == 0:
                 print(f"      No valid data found, skipping.")
@@ -104,7 +100,6 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
             png_filename = f"{base_name}.png"
             png_path = os.path.join(OUTPUT_DIR, png_filename)
 
-            # Save with smooth bilinear interpolation and correct color scaling
             fig, ax = plt.subplots(1, 1, figsize=(10, 10))
             ax.imshow(masked_temp, cmap='jet', origin='upper',
                       interpolation='bilinear', vmin=min_temp, vmax=max_temp)
@@ -115,58 +110,3 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
             meta = {
                 "date": ts.split('T')[0],
                 "timestamp": ts,
-                "ds_id": ds_id,
-                "ds_name": ds_display_name,
-                "image": png_filename,
-                "bounds": [[LAT_MIN, LON_MIN], [LAT_MAX, LON_MAX]],
-                "min_temp": min_temp,
-                "max_temp": max_temp
-            }
-            with open(os.path.join(OUTPUT_DIR, f"meta_{base_name}.json"), "w", encoding="utf-8") as f:
-                json.dump(meta, f, indent=2)
-            print(f"    SAVED: {png_filename} (temps: {min_temp:.1f}F - {max_temp:.1f}F)")
-
-    except Exception as e:
-        print(f"      Error: {e}")
-
-def fetch_history():
-    for ds in DATASETS:
-        ds_id, ds_name = ds["id"], ds["name"]
-        ds_nodes = ds.get("nodes", ["https://coastwatch.noaa.gov/erddap"])
-        for node in ds_nodes:
-            print(f"--- Scanning {ds_name} on {node} ---")
-            success = False
-            try:
-                t_resp = requests.get(f"{node}/griddap/{ds_id}.json?time", timeout=30)
-                if t_resp.status_code != 200:
-                    print(f"  Skipping — status {t_resp.status_code}")
-                    continue
-
-                recent_ts = [row[0] for row in t_resp.json()['table']['rows']][-LOOKBACK_DAYS:]
-
-                for ts in recent_ts:
-                    clean_ts = ts.replace(":", "").replace("-", "").replace("Z", "")
-                    base_name = f"sst_{ds_id}_{clean_ts}"
-
-                    print(f"  Fetching {ts}...")
-                    i_resp = requests.get(f"{node}/info/{ds_id}/index.json", timeout=20)
-                    if i_resp.status_code != 200:
-                        print(f"    Info fetch failed: {i_resp.status_code}")
-                        continue
-                    info = i_resp.json()
-                    var_name = next(
-                        (r[1] for r in info['table']['rows']
-                         if r[0] == 'variable' and r[1] in ["analysed_sst", "sea_surface_temperature", "sst"]),
-                        "analysed_sst"
-                    )
-
-                    dl_url = f"{node}/griddap/{ds_id}.nc?{var_name}[({ts})][({LAT_MIN}):({LAT_MAX})][({LON_MIN}):({LON_MAX})]"
-                    data_resp = requests.get(dl_url, timeout=120)
-                    if data_resp.status_code == 200:
-                        process_and_save_raster(data_resp.content, var_name, base_name, ts, ds_id, ds_name)
-                    else:
-                        print(f"    Download failed: {data_resp.status_code}")
-
-                success = True
-
-            except Excepti
