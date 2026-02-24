@@ -14,14 +14,32 @@ LOOKBACK_DAYS = 5
 RETENTION_DAYS = 14 
 
 DATASETS = [
-    {"id": "noaacwBLENDEDsstDNDaily", "name": "Geo-Polar Blended NRT"},
-    {"id": "noa_coastwatch_acspo_v2_nrt", "name": "ACSPO NRT Global"},
-    {"id": "goes19SSThourly", "name": "GOES-19 Hourly"},
-    {"id": "nesdisVHNSQnrtSST1day", "name": "VIIRS NOAA-20 NRT"},
-    {"id": "nesdisVHNnoaaSQnrtSST1day", "name": "VIIRS Suomi-NPP NRT"},
+    {
+        "id": "noaacwBLENDEDsstDNDaily",
+        "name": "Geo-Polar Blended NRT",
+        "nodes": ["https://coastwatch.noaa.gov/erddap", "https://cwcgom.aoml.noaa.gov/erddap"]
+    },
+    {
+        "id": "noa_coastwatch_acspo_v2_nrt",
+        "name": "ACSPO NRT Global",
+        "nodes": ["https://coastwatch.noaa.gov/erddap"]
+    },
+    {
+        "id": "goes19SSThourly",
+        "name": "GOES-19 Hourly",
+        "nodes": ["https://coastwatch.noaa.gov/erddap"]
+    },
+    {
+        "id": "nesdisVHNSQnrtSST1day",
+        "name": "VIIRS NOAA-20 NRT",
+        "nodes": ["https://coastwatch.noaa.gov/erddap"]
+    },
+    {
+        "id": "nesdisVHNnoaaSQnrtSST1day",
+        "name": "VIIRS Suomi-NPP NRT",
+        "nodes": ["https://coastwatch.noaa.gov/erddap"]
+    },
 ]
-
-NODES = ["https://coastwatch.noaa.gov/erddap", "https://cwcgom.aoml.noaa.gov/erddap"]
 
 if not os.path.exists(OUTPUT_DIR):
     os.makedirs(OUTPUT_DIR)
@@ -59,6 +77,7 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
             possible_vars = [var_name, "sea_surface_temperature", "sst", "analysed_sst"]
             target_var = next((v for v in possible_vars if v in ds.variables), None)
             if not target_var:
+                print(f"      No SST variable found. Available: {list(ds.variables.keys())}")
                 return
 
             raw_data = np.squeeze(ds.variables[target_var][:])
@@ -87,10 +106,10 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
             png_filename = f"{base_name}.png"
             png_path = os.path.join(OUTPUT_DIR, png_filename)
 
-            # Save image with correct color scaling and no interpolation blur
+            # Save with smooth bilinear interpolation and correct color scaling
             fig, ax = plt.subplots(1, 1, figsize=(10, 10))
             ax.imshow(masked_temp, cmap='jet', origin='upper',
-                      interpolation='bicubic', vmin=min_temp, vmax=max_temp)
+                      interpolation='bilinear', vmin=min_temp, vmax=max_temp)
             ax.axis('off')
             plt.savefig(png_path, bbox_inches='tight', pad_inches=0, dpi=150)
             plt.close(fig)
@@ -113,15 +132,17 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
         print(f"      Error: {e}")
 
 def fetch_history():
-    for node in NODES:
-        for ds in DATASETS:
-            ds_id, ds_name = ds["id"], ds["name"]
+    for ds in DATASETS:
+        ds_id, ds_name = ds["id"], ds["name"]
+        ds_nodes = ds.get("nodes", ["https://coastwatch.noaa.gov/erddap"])
+        for node in ds_nodes:
             print(f"--- Scanning {ds_name} on {node} ---")
             try:
                 t_resp = requests.get(f"{node}/griddap/{ds_id}.json?time", timeout=30)
                 if t_resp.status_code != 200:
                     print(f"  Skipping — status {t_resp.status_code}")
                     continue
+
                 recent_ts = [row[0] for row in t_resp.json()['table']['rows']][-LOOKBACK_DAYS:]
 
                 for ts in recent_ts:
@@ -131,6 +152,7 @@ def fetch_history():
                     print(f"  Fetching {ts}...")
                     i_resp = requests.get(f"{node}/info/{ds_id}/index.json", timeout=20)
                     if i_resp.status_code != 200:
+                        print(f"    Info fetch failed: {i_resp.status_code}")
                         continue
                     info = i_resp.json()
                     var_name = next(
@@ -145,6 +167,9 @@ def fetch_history():
                         process_and_save_raster(data_resp.content, var_name, base_name, ts, ds_id, ds_name)
                     else:
                         print(f"    Download failed: {data_resp.status_code}")
+
+                # Successfully fetched from this node, no need to try next node
+                break
 
             except Exception as e:
                 print(f"  Error: {e}")
