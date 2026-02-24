@@ -22,25 +22,6 @@
     {
       "date": "2026-02-19",
       "timestamp": "2026-02-19T12:00:00Z",
-      "ds_id": "noaacrwsstDaily",
-      "ds_name": "CoralTemp 5km Daily",
-      "image": "sst_noaacrwsstDaily_20260219T120000.png",
-      "bounds": [
-        [
-          33.5,
-          -76.5
-        ],
-        [
-          36.8,
-          -72.5
-        ]
-      ],
-      "min_temp": 39.50168,
-      "max_temp": 73.436
-    },
-    {
-      "date": "2026-02-19",
-      "timestamp": "2026-02-19T12:00:00Z",
       "ds_id": "noaacwBLENDEDsstDNDaily",
       "ds_name": "Geo-Polar Blended 5km (Gap-Free)",
       "image": "sst_noaacwBLENDEDsstDNDaily_20260219T120000.png",
@@ -96,25 +77,6 @@
       ],
       "min_temp": 40.73378,
       "max_temp": 74.96041999999998
-    },
-    {
-      "date": "2026-02-20",
-      "timestamp": "2026-02-20T12:00:00Z",
-      "ds_id": "noaacrwsstDaily",
-      "ds_name": "CoralTemp 5km Daily",
-      "image": "sst_noaacrwsstDaily_20260220T120000.png",
-      "bounds": [
-        [
-          33.5,
-          -76.5
-        ],
-        [
-          36.8,
-          -72.5
-        ]
-      ],
-      "min_temp": 38.696,
-      "max_temp": 74.012
     },
     {
       "date": "2026-02-20",
@@ -178,25 +140,6 @@
     {
       "date": "2026-02-21",
       "timestamp": "2026-02-21T12:00:00Z",
-      "ds_id": "noaacrwsstDaily",
-      "ds_name": "CoralTemp 5km Daily",
-      "image": "sst_noaacrwsstDaily_20260221T120000.png",
-      "bounds": [
-        [
-          33.5,
-          -76.5
-        ],
-        [
-          36.8,
-          -72.5
-        ]
-      ],
-      "min_temp": 39.30368,
-      "max_temp": 74.22800000000001
-    },
-    {
-      "date": "2026-02-21",
-      "timestamp": "2026-02-21T12:00:00Z",
       "ds_id": "noaacwBLENDEDsstDNDaily",
       "ds_name": "Geo-Polar Blended 5km (Gap-Free)",
       "image": "sst_noaacwBLENDEDsstDNDaily_20260221T120000.png",
@@ -256,25 +199,6 @@
     {
       "date": "2026-02-22",
       "timestamp": "2026-02-22T12:00:00Z",
-      "ds_id": "noaacrwsstDaily",
-      "ds_name": "CoralTemp 5km Daily",
-      "image": "sst_noaacrwsstDaily_20260222T120000.png",
-      "bounds": [
-        [
-          33.5,
-          -76.5
-        ],
-        [
-          36.8,
-          -72.5
-        ]
-      ],
-      "min_temp": 40.01,
-      "max_temp": 73.85
-    },
-    {
-      "date": "2026-02-22",
-      "timestamp": "2026-02-22T12:00:00Z",
       "ds_id": "noaacwBLENDEDsstDNDaily",
       "ds_name": "Geo-Polar Blended 5km (Gap-Free)",
       "image": "sst_noaacwBLENDEDsstDNDaily_20260222T120000.png",
@@ -330,25 +254,6 @@
       ],
       "min_temp": 44.7584,
       "max_temp": 72.8168
-    },
-    {
-      "date": "2026-02-23",
-      "timestamp": "2026-02-23T12:00:00Z",
-      "ds_id": "noaacrwsstDaily",
-      "ds_name": "CoralTemp 5km Daily",
-      "image": "sst_noaacrwsstDaily_20260223T120000.png",
-      "bounds": [
-        [
-          33.5,
-          -76.5
-        ],
-        [
-          36.8,
-          -72.5
-        ]
-      ],
-      "min_temp": 39.987680000000005,
-      "max_temp": 73.706
     },
     {
       "date": "2026-02-23",
