@@ -20,19 +20,14 @@ DATASETS = [
         "nodes": ["https://coastwatch.noaa.gov/erddap", "https://cwcgom.aoml.noaa.gov/erddap"]
     },
     {
-        "id": "noaacwBLENDEDsstDLDaily",
-        "name": "Geo-Polar Blended NRT (Night Only)",
-        "nodes": ["https://coastwatch.noaa.gov/erddap"]
-    },
-    {
-        "id": "noaacwL3CollatednppC",
-        "name": "VIIRS S-NPP ACSPO 4km Daily",
-        "nodes": ["https://coastwatch.noaa.gov/erddap"]
-    },
-    {
         "id": "noaacrwsstDaily",
         "name": "CoralTemp 5km Daily",
         "nodes": ["https://coastwatch.noaa.gov/erddap"]
+    },
+    {
+        "id": "jplMURSST41",
+        "name": "MUR SST 1km Daily (NASA JPL)",
+        "nodes": ["https://coastwatch.pfeg.noaa.gov/erddap"]
     },
 ]
 
@@ -69,7 +64,7 @@ def update_manifest():
 def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_name):
     try:
         with Dataset("memory", memory=content) as ds:
-            possible_vars = [var_name, "sea_surface_temperature", "sst", "analysed_sst"]
+            possible_vars = [var_name, "analysed_sst", "sea_surface_temperature", "sst"]
             target_var = next((v for v in possible_vars if v in ds.variables), None)
             if not target_var:
                 print(f"      No SST variable found. Available: {list(ds.variables.keys())}")
@@ -78,8 +73,12 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
             raw_data = np.squeeze(ds.variables[target_var][:])
             lats = ds.variables['latitude'][:]
 
-            units = ds.variables[target_var].units if hasattr(ds.variables[target_var], 'units') else "K"
-            temp_f = ((raw_data - 273.15) * 1.8 + 32) if "K" in units.upper() else (raw_data * 1.8 + 32)
+            units = ds.variables[target_var].units if hasattr(ds.variables[target_var], 'units') else "celsius"
+            if "K" in units.upper():
+                temp_f = (raw_data - 273.15) * 1.8 + 32
+            else:
+                # Assume Celsius
+                temp_f = raw_data * 1.8 + 32
 
             # If latitudes are ascending (South to North), flip for image coordinates
             if lats[0] < lats[-1]:
@@ -95,8 +94,11 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
 
             # Calculate min/max from actual data
             valid_data = masked_temp.compressed()
-            min_temp = float(np.percentile(valid_data, 2)) if len(valid_data) > 0 else 50.0
-            max_temp = float(np.percentile(valid_data, 98)) if len(valid_data) > 0 else 85.0
+            if len(valid_data) == 0:
+                print(f"      No valid data found, skipping.")
+                return
+            min_temp = float(np.percentile(valid_data, 2))
+            max_temp = float(np.percentile(valid_data, 98))
 
             png_filename = f"{base_name}.png"
             png_path = os.path.join(OUTPUT_DIR, png_filename)
@@ -152,8 +154,8 @@ def fetch_history():
                     info = i_resp.json()
                     var_name = next(
                         (r[1] for r in info['table']['rows']
-                         if r[0] == 'variable' and r[1] in ["sea_surface_temperature", "sst", "analysed_sst"]),
-                        "sst"
+                         if r[0] == 'variable' and r[1] in ["analysed_sst", "sea_surface_temperature", "sst"]),
+                        "analysed_sst"
                     )
 
                     dl_url = f"{node}/griddap/{ds_id}.nc?{var_name}[({ts})][({LAT_MIN}):({LAT_MAX})][({LON_MIN}):({LON_MAX})]"
@@ -163,13 +165,4 @@ def fetch_history():
                     else:
                         print(f"    Download failed: {data_resp.status_code}")
 
-                # Successfully fetched from this node, no need to try next node
-                break
-
-            except Exception as e:
-                print(f"  Error: {e}")
-
-if __name__ == "__main__":
-    cleanup_old_files()
-    fetch_history()
-    update_manifest()
+                # Successfully fetched from
