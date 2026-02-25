@@ -5,11 +5,10 @@ from netCDF4 import Dataset
 import os
 import matplotlib.pyplot as plt
 import time
-from scipy.ndimage import gaussian_filter, zoom
 
 # --- COORDINATES: NC OFFSHORE ---
-LAT_MIN, LAT_MAX = 33.5, 36.8
-LON_MIN, LON_MAX = -76.5, -72.5
+LAT_MIN, LAT_MAX = 33.5, 36.8   
+LON_MIN, LON_MAX = -76.5, -72.5  
 OUTPUT_DIR = "historical_data"
 LOOKBACK_DAYS = 5
 RETENTION_DAYS = 5
@@ -35,7 +34,6 @@ DATASETS = [
 if not os.path.exists(OUTPUT_DIR):
     os.makedirs(OUTPUT_DIR)
 
-
 def cleanup_old_files():
     for f in os.listdir(OUTPUT_DIR):
         path = os.path.join(OUTPUT_DIR, f)
@@ -45,7 +43,6 @@ def cleanup_old_files():
             if age_days > (RETENTION_DAYS + 1):
                 os.remove(path)
                 print(f"  Purged: {f}")
-
 
 def update_manifest():
     meta_files = [f for f in os.listdir(OUTPUT_DIR) if f.startswith("meta_") and f.endswith(".json")]
@@ -64,21 +61,6 @@ def update_manifest():
             continue
     with open(os.path.join(OUTPUT_DIR, "manifest.json"), "w", encoding="utf-8") as f:
         json.dump(manifest_data, f, indent=2)
-
-
-def smooth_masked_array(masked_temp, sigma=1.5):
-    """Smooth data values while preserving mask boundaries cleanly."""
-    filled = masked_temp.filled(np.nan)
-    mask = masked_temp.mask if np.ma.is_masked(masked_temp) else np.zeros(filled.shape, dtype=bool)
-
-    nan_mask = np.isnan(filled)
-    filled_for_smooth = filled.copy()
-    filled_for_smooth[nan_mask] = np.nanmean(filled)
-
-    smoothed = gaussian_filter(filled_for_smooth, sigma=sigma)
-
-    return np.ma.masked_where(mask | nan_mask, smoothed)
-
 
 def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_name):
     try:
@@ -108,8 +90,6 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
                 final_grid
             )
 
-            print(f"      Native grid shape: {masked_temp.shape} (rows x cols)")
-
             valid_data = masked_temp.compressed()
             if len(valid_data) == 0:
                 print(f"      No valid data found, skipping.")
@@ -117,32 +97,14 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
             min_temp = float(np.percentile(valid_data, 2))
             max_temp = float(np.percentile(valid_data, 98))
 
-            # Step 1: Gaussian smooth to reduce pixelation
-            smoothed_temp = smooth_masked_array(masked_temp, sigma=1.5)
-
-            # Step 2: Upscale data and mask separately
-            scale = 8
-            mask = smoothed_temp.mask if np.ma.is_masked(smoothed_temp) else np.zeros(smoothed_temp.shape, dtype=bool)
-
-            upscaled_data = zoom(smoothed_temp.filled(np.nanmean(valid_data)), scale, order=3)
-            upscaled_mask = zoom(mask.astype(float), scale, order=0) > 0.5
-
-            # Step 3: Colorize with jet colormap
-            cmap = plt.cm.jet
-            norm = plt.Normalize(vmin=min_temp, vmax=max_temp)
-            rgba = cmap(norm(upscaled_data))
-
-            # Step 4: Apply transparency where masked
-            rgba[..., 3] = np.where(upscaled_mask, 0, 1)
-
             png_filename = f"{base_name}.png"
             png_path = os.path.join(OUTPUT_DIR, png_filename)
 
-            # Step 5: Render — already smooth from zoom so nearest is fine
             fig, ax = plt.subplots(1, 1, figsize=(10, 10))
-            ax.imshow(rgba, origin='upper', interpolation='nearest')
+            ax.imshow(masked_temp, cmap='jet', origin='upper',
+                      interpolation='bilinear', vmin=min_temp, vmax=max_temp)
             ax.axis('off')
-            plt.savefig(png_path, bbox_inches='tight', pad_inches=0, dpi=150, transparent=True)
+            plt.savefig(png_path, bbox_inches='tight', pad_inches=0, dpi=150)
             plt.close(fig)
 
             meta = {
@@ -161,7 +123,6 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
 
     except Exception as e:
         print(f"      Error: {e}")
-
 
 def fetch_history():
     for ds in DATASETS:
@@ -194,11 +155,7 @@ def fetch_history():
                         "analysed_sst"
                     )
 
-                    dl_url = (
-                        f"{node}/griddap/{ds_id}.nc"
-                        f"?{var_name}"
-                        f"[({ts})][({LAT_MIN}):({LAT_MAX})][({LON_MIN}):({LON_MAX})]"
-                    )
+                    dl_url = f"{node}/griddap/{ds_id}.nc?{var_name}[({ts})][({LAT_MIN}):({LAT_MAX})][({LON_MIN}):({LON_MAX})]"
                     data_resp = requests.get(dl_url, timeout=120)
                     if data_resp.status_code == 200:
                         process_and_save_raster(data_resp.content, var_name, base_name, ts, ds_id, ds_name)
@@ -212,7 +169,6 @@ def fetch_history():
 
             if success:
                 break
-
 
 if __name__ == "__main__":
     cleanup_old_files()
