@@ -5,7 +5,7 @@ from netCDF4 import Dataset
 import os
 import matplotlib.pyplot as plt
 import time
-from scipy.ndimage import gaussian_filter
+from scipy.ndimage import gaussian_filter, zoom
 
 # --- COORDINATES: NC OFFSHORE ---
 LAT_MIN, LAT_MAX = 33.5, 36.8
@@ -68,20 +68,15 @@ def update_manifest():
 
 def smooth_masked_array(masked_temp, sigma=1.5):
     """Smooth data values while preserving mask boundaries cleanly."""
-    # Fill masked values with nearest valid neighbor before smoothing
-    # so gaussian doesn't bleed invalid values into valid areas
     filled = masked_temp.filled(np.nan)
     mask = masked_temp.mask if np.ma.is_masked(masked_temp) else np.zeros(filled.shape, dtype=bool)
 
-    # Replace NaNs with local mean for smoothing purposes only
     nan_mask = np.isnan(filled)
     filled_for_smooth = filled.copy()
     filled_for_smooth[nan_mask] = np.nanmean(filled)
 
-    # Apply gaussian smooth to data values only
     smoothed = gaussian_filter(filled_for_smooth, sigma=sigma)
 
-    # Re-apply the original mask so boundaries stay sharp
     return np.ma.masked_where(mask | nan_mask, smoothed)
 
 
@@ -122,21 +117,28 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
             min_temp = float(np.percentile(valid_data, 2))
             max_temp = float(np.percentile(valid_data, 98))
 
-            # Smooth data values while keeping mask boundaries clean
+            # Step 1: Gaussian smooth to reduce pixelation
             smoothed_temp = smooth_masked_array(masked_temp, sigma=1.5)
+
+            # Step 2: Upscale data and mask separately
+            scale = 8
+            mask = smoothed_temp.mask if np.ma.is_masked(smoothed_temp) else np.zeros(smoothed_temp.shape, dtype=bool)
+
+            upscaled_data = zoom(smoothed_temp.filled(np.nanmean(valid_data)), scale, order=3)
+            upscaled_mask = zoom(mask.astype(float), scale, order=0) > 0.5
+
+            # Step 3: Colorize with jet colormap
+            cmap = plt.cm.jet
+            norm = plt.Normalize(vmin=min_temp, vmax=max_temp)
+            rgba = cmap(norm(upscaled_data))
+
+            # Step 4: Apply transparency where masked
+            rgba[..., 3] = np.where(upscaled_mask, 0, 1)
 
             png_filename = f"{base_name}.png"
             png_path = os.path.join(OUTPUT_DIR, png_filename)
 
-            # Convert to RGBA with transparency for masked (cloud/land) areas
-            cmap = plt.cm.jet
-            norm = plt.Normalize(vmin=min_temp, vmax=max_temp)
-            rgba = cmap(norm(smoothed_temp.filled(np.nan)))
-
-            # Set alpha: 0 (transparent) where masked, 1 (opaque) where valid
-            mask = smoothed_temp.mask if np.ma.is_masked(smoothed_temp) else np.zeros(smoothed_temp.shape, dtype=bool)
-            rgba[..., 3] = np.where(mask, 0, 1)
-
+            # Step 5: Render — already smooth from zoom so nearest is fine
             fig, ax = plt.subplots(1, 1, figsize=(10, 10))
             ax.imshow(rgba, origin='upper', interpolation='nearest')
             ax.axis('off')
