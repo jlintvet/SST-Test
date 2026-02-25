@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 import time
 
 # --- COORDINATES: NC OFFSHORE ---
-LAT_MIN, LAT_MAX = 33.5, 36.8   
-LON_MIN, LON_MAX = -76.5, -72.5  
+LAT_MIN, LAT_MAX = 30.0, 39.0   
+LON_MIN, LON_MAX = -77.5, -68.0 
 OUTPUT_DIR = "historical_data"
 LOOKBACK_DAYS = 5
 RETENTION_DAYS = 5
