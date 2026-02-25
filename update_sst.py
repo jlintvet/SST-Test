@@ -73,6 +73,15 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
 
             raw_data = np.squeeze(ds.variables[target_var][:])
             lats = ds.variables['latitude'][:]
+            lons = ds.variables['longitude'][:]
+
+            # Read ACTUAL bounds from the file instead of using requested bounds
+            actual_lat_min = float(lats.min())
+            actual_lat_max = float(lats.max())
+            actual_lon_min = float(lons.min())
+            actual_lon_max = float(lons.max())
+
+            print(f"      Actual bounds: lat {actual_lat_min:.2f}-{actual_lat_max:.2f}, lon {actual_lon_min:.2f}-{actual_lon_max:.2f}")
 
             units = ds.variables[target_var].units if hasattr(ds.variables[target_var], 'units') else "celsius"
             if "K" in units.upper():
@@ -113,7 +122,7 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
                 "ds_id": ds_id,
                 "ds_name": ds_display_name,
                 "image": png_filename,
-                "bounds": [[LAT_MIN, LON_MIN], [LAT_MAX, LON_MAX]],
+                "bounds": [[actual_lat_min, actual_lon_min], [actual_lat_max, actual_lon_max]],
                 "min_temp": min_temp,
                 "max_temp": max_temp
             }
