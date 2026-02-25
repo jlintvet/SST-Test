@@ -1,0 +1,19 @@
+{
+  "date": "2026-02-23",
+  "timestamp": "2026-02-23T12:00:00Z",
+  "ds_id": "noaacwBLENDEDsstDNDaily",
+  "ds_name": "Geo-Polar Blended 5km (Gap-Free)",
+  "image": "sst_noaacwBLENDEDsstDNDaily_20260223T120000.png",
+  "bounds": [
+    [
+      30.0,
+      -77.5
+    ],
+    [
+      39.0,
+      -68.0
+    ]
+  ],
+  "min_temp": 37.2559889793396,
+  "max_temp": 73.885990524292
+}
