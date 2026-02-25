@@ -75,7 +75,7 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
             lats = ds.variables['latitude'][:]
             lons = ds.variables['longitude'][:]
 
-            # Read ACTUAL bounds from the file instead of using requested bounds
+            # Read ACTUAL bounds from the file
             actual_lat_min = float(lats.min())
             actual_lat_max = float(lats.max())
             actual_lon_min = float(lons.min())
@@ -109,9 +109,17 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
             png_filename = f"{base_name}.png"
             png_path = os.path.join(OUTPUT_DIR, png_filename)
 
-            fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+            # Match figure aspect ratio to geographic bounds so image aligns correctly
+            lat_range = actual_lat_max - actual_lat_min
+            lon_range = actual_lon_max - actual_lon_min
+            aspect = lon_range / lat_range
+            fig_height = 10
+            fig_width = fig_height * aspect
+
+            fig, ax = plt.subplots(1, 1, figsize=(fig_width, fig_height))
             ax.imshow(masked_temp, cmap='jet', origin='upper',
-                      interpolation='bilinear', vmin=min_temp, vmax=max_temp)
+                      interpolation='bilinear', vmin=min_temp, vmax=max_temp,
+                      aspect='auto')
             ax.axis('off')
             plt.savefig(png_path, bbox_inches='tight', pad_inches=0, dpi=150)
             plt.close(fig)
