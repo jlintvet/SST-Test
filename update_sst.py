@@ -3,8 +3,10 @@ import requests
 import json
 from netCDF4 import Dataset
 import os
-import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import matplotlib.colors as mcolors
 import time
+from PIL import Image as PILImage
 
 # --- COORDINATES: NC OFFSHORE ---
 LAT_MIN, LAT_MAX = 30.0, 39.0   
@@ -82,6 +84,7 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
             actual_lon_max = float(lons.max())
 
             print(f"      Actual bounds: lat {actual_lat_min:.2f}-{actual_lat_max:.2f}, lon {actual_lon_min:.2f}-{actual_lon_max:.2f}")
+            print(f"      Grid shape: {raw_data.shape}")
 
             units = ds.variables[target_var].units if hasattr(ds.variables[target_var], 'units') else "celsius"
             if "K" in units.upper():
@@ -89,14 +92,13 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
             else:
                 temp_f = raw_data * 1.8 + 32
 
+            # Ensure north-to-south row order (row 0 = northernmost)
             if lats[0] < lats[-1]:
-                final_grid = np.flipud(temp_f)
-            else:
-                final_grid = temp_f
+                temp_f = np.flipud(temp_f)
 
             masked_temp = np.ma.masked_where(
-                ~np.isfinite(final_grid) | (final_grid < 30) | (final_grid > 100),
-                final_grid
+                ~np.isfinite(temp_f) | (temp_f < 30) | (temp_f > 100),
+                temp_f
             )
 
             valid_data = masked_temp.compressed()
@@ -109,20 +111,14 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
             png_filename = f"{base_name}.png"
             png_path = os.path.join(OUTPUT_DIR, png_filename)
 
-            # Match figure aspect ratio to geographic bounds so image aligns correctly
-            lat_range = actual_lat_max - actual_lat_min
-            lon_range = actual_lon_max - actual_lon_min
-            aspect = lon_range / lat_range
-            fig_height = 10
-            fig_width = fig_height * aspect
+            # Convert directly to RGBA using PIL — no matplotlib figure padding
+            colormap = cm.jet
+            norm = mcolors.Normalize(vmin=min_temp, vmax=max_temp)
+            rgba = colormap(norm(masked_temp.filled(np.nan)))
+            rgba_uint8 = (rgba * 255).astype(np.uint8)
 
-            fig, ax = plt.subplots(1, 1, figsize=(fig_width, fig_height))
-            ax.imshow(masked_temp, cmap='jet', origin='upper',
-                      interpolation='bilinear', vmin=min_temp, vmax=max_temp,
-                      aspect='auto')
-            ax.axis('off')
-            plt.savefig(png_path, bbox_inches='tight', pad_inches=0, dpi=150)
-            plt.close(fig)
+            img = PILImage.fromarray(rgba_uint8, mode='RGBA')
+            img.save(png_path)
 
             meta = {
                 "date": ts.split('T')[0],
