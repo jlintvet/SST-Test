@@ -93,6 +93,8 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
                 temp_f = raw_data * 1.8 + 32
 
             # Ensure north-to-south row order (row 0 = northernmost)
+            # Leaflet ImageOverlay renders top of image at lat_max (north),
+            # so row 0 must correspond to the northernmost latitude.
             if lats[0] < lats[-1]:
                 temp_f = np.flipud(temp_f)
 
@@ -111,15 +113,26 @@ def process_and_save_raster(content, var_name, base_name, ts, ds_id, ds_display_
             png_filename = f"{base_name}.png"
             png_path = os.path.join(OUTPUT_DIR, png_filename)
 
-            # Convert directly to RGBA using PIL — no matplotlib figure padding
+            # Convert to RGBA using PIL — no matplotlib figure padding
             colormap = cm.jet
             norm = mcolors.Normalize(vmin=min_temp, vmax=max_temp)
-            rgba = colormap(norm(masked_temp.filled(np.nan)))
+
+            # Fill masked values with NaN for processing
+            filled = masked_temp.filled(np.nan)
+            normalized = norm(filled)
+            rgba = colormap(normalized)
             rgba_uint8 = (rgba * 255).astype(np.uint8)
+
+            # KEY FIX: make all NaN/masked pixels fully transparent (alpha = 0)
+            # Without this, missing/land pixels render as a solid color that
+            # obscures the coastline and makes the overlay appear misaligned.
+            nan_mask = ~np.isfinite(filled)
+            rgba_uint8[nan_mask, 3] = 0
 
             img = PILImage.fromarray(rgba_uint8, mode='RGBA')
             img.save(png_path)
 
+            # Bounds saved as [[south, west], [north, east]] — Leaflet convention
             meta = {
                 "date": ts.split('T')[0],
                 "timestamp": ts,
