@@ -193,8 +193,8 @@
           -68.0
         ]
       ],
-      "min_temp": 36.9788,
-      "max_temp": 74.2676
+      "min_temp": 36.4784,
+      "max_temp": 74.5574
     },
     {
       "date": "2026-02-23",
@@ -252,8 +252,8 @@
           -68.0
         ]
       ],
-      "min_temp": 36.9554,
-      "max_temp": 74.0642
+      "min_temp": 36.840596000000005,
+      "max_temp": 74.01740000000001
     },
     {
       "date": "2026-02-24",
@@ -294,6 +294,46 @@
       "max_temp": 70.2104052734376
     }
   ],
+  "2026-02-25": [
+    {
+      "date": "2026-02-25",
+      "timestamp": "2026-02-25T09:00:00Z",
+      "ds_id": "jplMURSST41",
+      "ds_name": "MUR SST 1km (Highest Resolution)",
+      "image": "sst_jplMURSST41_20260225T090000.png",
+      "bounds": [
+        [
+          30.0,
+          -77.5
+        ],
+        [
+          39.0,
+          -68.0
+        ]
+      ],
+      "min_temp": 36.8546,
+      "max_temp": 72.833
+    },
+    {
+      "date": "2026-02-25",
+      "timestamp": "2026-02-25T12:00:00Z",
+      "ds_id": "noaacwLEOACSPOSSTL3SnrtKDaily",
+      "ds_name": "VIIRS+AVHRR Super-Collated 2km",
+      "image": "sst_noaacwLEOACSPOSSTL3SnrtKDaily_20260225T120000.png",
+      "bounds": [
+        [
+          30.010000228881836,
+          -77.48999786376953
+        ],
+        [
+          39.0099983215332,
+          -67.98999786376953
+        ]
+      ],
+      "min_temp": 36.29697045898442,
+      "max_temp": 73.04002197265629
+    }
+  ],
   "2026-02-19": [
     {
       "date": "2026-02-19",
@@ -313,27 +353,6 @@
       ],
       "min_temp": 35.99310889625549,
       "max_temp": 73.435990524292
-    }
-  ],
-  "2026-02-25": [
-    {
-      "date": "2026-02-25",
-      "timestamp": "2026-02-25T12:00:00Z",
-      "ds_id": "noaacwLEOACSPOSSTL3SnrtKDaily",
-      "ds_name": "VIIRS+AVHRR Super-Collated 2km",
-      "image": "sst_noaacwLEOACSPOSSTL3SnrtKDaily_20260225T120000.png",
-      "bounds": [
-        [
-          30.010000228881836,
-          -77.48999786376953
-        ],
-        [
-          39.0099983215332,
-          -67.98999786376953
-        ]
-      ],
-      "min_temp": 36.29697045898442,
-      "max_temp": 73.04002197265629
     }
   ]
 }
