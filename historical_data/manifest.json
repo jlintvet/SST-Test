@@ -806,6 +806,27 @@
       "max_temp": 75.19998901367191
     }
   ],
+  "2026-03-06": [
+    {
+      "date": "2026-03-06",
+      "timestamp": "2026-03-06T09:00:00Z",
+      "ds_id": "jplMURSST41",
+      "ds_name": "MUR SST 1km (Highest Resolution)",
+      "image": "sst_jplMURSST41_20260306T090000.png",
+      "bounds": [
+        [
+          30.0,
+          -77.5
+        ],
+        [
+          39.0,
+          -68.0
+        ]
+      ],
+      "min_temp": 40.1648,
+      "max_temp": 75.4808
+    }
+  ],
   "2026-02-19": [
     {
       "date": "2026-02-19",
