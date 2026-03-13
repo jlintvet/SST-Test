@@ -1,0 +1,19 @@
+{
+  "date": "2026-03-12",
+  "timestamp": "2026-03-12T09:00:00Z",
+  "ds_id": "jplMURSST41",
+  "ds_name": "MUR SST 1km (Highest Resolution)",
+  "image": "sst_jplMURSST41_20260312T090000.png",
+  "bounds": [
+    [
+      30.0,
+      -77.5
+    ],
+    [
+      39.0,
+      -68.0
+    ]
+  ],
+  "min_temp": 42.683,
+  "max_temp": 77.369
+}
