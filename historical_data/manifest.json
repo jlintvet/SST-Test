@@ -2854,6 +2854,25 @@
     {
       "date": "2026-04-09",
       "timestamp": "2026-04-09T12:00:00Z",
+      "ds_id": "noaacwBLENDEDsstDNDaily",
+      "ds_name": "Geo-Polar Blended 5km (Gap-Free)",
+      "image": "sst_noaacwBLENDEDsstDNDaily_20260409T120000.png",
+      "bounds": [
+        [
+          30.024999618530273,
+          -77.4749984741211
+        ],
+        [
+          39.025001525878906,
+          -67.9749984741211
+        ]
+      ],
+      "min_temp": 47.56998901367187,
+      "max_temp": 75.93798942565918
+    },
+    {
+      "date": "2026-04-09",
+      "timestamp": "2026-04-09T12:00:00Z",
       "ds_id": "noaacwLEOACSPOSSTL3SnrtKDaily",
       "ds_name": "VIIRS+AVHRR Super-Collated 2km",
       "image": "sst_noaacwLEOACSPOSSTL3SnrtKDaily_20260409T120000.png",
@@ -2890,6 +2909,25 @@
       ],
       "min_temp": 48.0686,
       "max_temp": 74.2406
+    },
+    {
+      "date": "2026-04-10",
+      "timestamp": "2026-04-10T12:00:00Z",
+      "ds_id": "noaacwLEOACSPOSSTL3SnrtKDaily",
+      "ds_name": "VIIRS+AVHRR Super-Collated 2km",
+      "image": "sst_noaacwLEOACSPOSSTL3SnrtKDaily_20260410T120000.png",
+      "bounds": [
+        [
+          30.010000228881836,
+          -77.48999786376953
+        ],
+        [
+          39.0099983215332,
+          -67.98999786376953
+        ]
+      ],
+      "min_temp": 47.24599121093754,
+      "max_temp": 76.01001098632817
     }
   ],
   "2026-02-19": [
