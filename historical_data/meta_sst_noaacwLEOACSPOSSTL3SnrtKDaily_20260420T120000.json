@@ -1,0 +1,19 @@
+{
+  "date": "2026-04-20",
+  "timestamp": "2026-04-20T12:00:00Z",
+  "ds_id": "noaacwLEOACSPOSSTL3SnrtKDaily",
+  "ds_name": "VIIRS+AVHRR Super-Collated 2km",
+  "image": "sst_noaacwLEOACSPOSSTL3SnrtKDaily_20260420T120000.png",
+  "bounds": [
+    [
+      30.010000228881836,
+      -77.48999786376953
+    ],
+    [
+      39.0099983215332,
+      -67.98999786376953
+    ]
+  ],
+  "min_temp": 48.794019775390666,
+  "max_temp": 76.92797363281255
+}
