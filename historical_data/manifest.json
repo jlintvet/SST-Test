@@ -3739,6 +3739,25 @@
     {
       "date": "2026-04-24",
       "timestamp": "2026-04-24T12:00:00Z",
+      "ds_id": "noaacwBLENDEDsstDNDaily",
+      "ds_name": "Geo-Polar Blended 5km (Gap-Free)",
+      "image": "sst_noaacwBLENDEDsstDNDaily_20260424T120000.png",
+      "bounds": [
+        [
+          30.024999618530273,
+          -77.4749984741211
+        ],
+        [
+          39.025001525878906,
+          -67.9749984741211
+        ]
+      ],
+      "min_temp": 51.04398956298829,
+      "max_temp": 77.3239902496338
+    },
+    {
+      "date": "2026-04-24",
+      "timestamp": "2026-04-24T12:00:00Z",
       "ds_id": "noaacwLEOACSPOSSTL3SnrtKDaily",
       "ds_name": "VIIRS+AVHRR Super-Collated 2km",
       "image": "sst_noaacwLEOACSPOSSTL3SnrtKDaily_20260424T120000.png",
