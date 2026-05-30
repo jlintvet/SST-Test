@@ -5745,6 +5745,25 @@
     {
       "date": "2026-05-28",
       "timestamp": "2026-05-28T12:00:00Z",
+      "ds_id": "noaacwBLENDEDsstDNDaily",
+      "ds_name": "Geo-Polar Blended 5km (Gap-Free)",
+      "image": "sst_noaacwBLENDEDsstDNDaily_20260528T120000.png",
+      "bounds": [
+        [
+          30.024999618530273,
+          -77.4749984741211
+        ],
+        [
+          39.025001525878906,
+          -67.9749984741211
+        ]
+      ],
+      "min_temp": 59.377989768981934,
+      "max_temp": 81.35598983764649
+    },
+    {
+      "date": "2026-05-28",
+      "timestamp": "2026-05-28T12:00:00Z",
       "ds_id": "noaacwLEOACSPOSSTL3SnrtKDaily",
       "ds_name": "VIIRS+AVHRR Super-Collated 2km",
       "image": "sst_noaacwLEOACSPOSSTL3SnrtKDaily_20260528T120000.png",
@@ -5760,6 +5779,46 @@
       ],
       "min_temp": 59.48602416992192,
       "max_temp": 81.14002197265629
+    }
+  ],
+  "2026-05-29": [
+    {
+      "date": "2026-05-29",
+      "timestamp": "2026-05-29T09:00:00Z",
+      "ds_id": "jplMURSST41",
+      "ds_name": "MUR SST 1km (Highest Resolution)",
+      "image": "sst_jplMURSST41_20260529T090000.png",
+      "bounds": [
+        [
+          30.0,
+          -77.5
+        ],
+        [
+          39.0,
+          -68.0
+        ]
+      ],
+      "min_temp": 59.9738,
+      "max_temp": 81.2912
+    },
+    {
+      "date": "2026-05-29",
+      "timestamp": "2026-05-29T12:00:00Z",
+      "ds_id": "noaacwLEOACSPOSSTL3SnrtKDaily",
+      "ds_name": "VIIRS+AVHRR Super-Collated 2km",
+      "image": "sst_noaacwLEOACSPOSSTL3SnrtKDaily_20260529T120000.png",
+      "bounds": [
+        [
+          30.010000228881836,
+          -77.48999786376953
+        ],
+        [
+          39.0099983215332,
+          -67.98999786376953
+        ]
+      ],
+      "min_temp": 59.43202636718755,
+      "max_temp": 80.47397583007816
     }
   ],
   "2026-02-19": [
