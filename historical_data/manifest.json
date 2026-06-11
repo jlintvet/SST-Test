@@ -6489,6 +6489,46 @@
       "max_temp": 81.86001098632818
     }
   ],
+  "2026-06-10": [
+    {
+      "date": "2026-06-10",
+      "timestamp": "2026-06-10T09:00:00Z",
+      "ds_id": "jplMURSST41",
+      "ds_name": "MUR SST 1km (Highest Resolution)",
+      "image": "sst_jplMURSST41_20260610T090000.png",
+      "bounds": [
+        [
+          30.0,
+          -77.5
+        ],
+        [
+          39.0,
+          -68.0
+        ]
+      ],
+      "min_temp": 61.3742,
+      "max_temp": 82.07419999999999
+    },
+    {
+      "date": "2026-06-10",
+      "timestamp": "2026-06-10T12:00:00Z",
+      "ds_id": "noaacwLEOACSPOSSTL3SnrtKDaily",
+      "ds_name": "VIIRS+AVHRR Super-Collated 2km",
+      "image": "sst_noaacwLEOACSPOSSTL3SnrtKDaily_20260610T120000.png",
+      "bounds": [
+        [
+          30.010000228881836,
+          -77.48999786376953
+        ],
+        [
+          39.0099983215332,
+          -67.98999786376953
+        ]
+      ],
+      "min_temp": 61.48399780273442,
+      "max_temp": 82.32797363281254
+    }
+  ],
   "2026-02-19": [
     {
       "date": "2026-02-19",
@@ -6508,27 +6548,6 @@
       ],
       "min_temp": 35.99310889625549,
       "max_temp": 73.435990524292
-    }
-  ],
-  "2026-06-10": [
-    {
-      "date": "2026-06-10",
-      "timestamp": "2026-06-10T12:00:00Z",
-      "ds_id": "noaacwLEOACSPOSSTL3SnrtKDaily",
-      "ds_name": "VIIRS+AVHRR Super-Collated 2km",
-      "image": "sst_noaacwLEOACSPOSSTL3SnrtKDaily_20260610T120000.png",
-      "bounds": [
-        [
-          30.010000228881836,
-          -77.48999786376953
-        ],
-        [
-          39.0099983215332,
-          -67.98999786376953
-        ]
-      ],
-      "min_temp": 61.48399780273442,
-      "max_temp": 82.32797363281254
     }
   ]
 }
