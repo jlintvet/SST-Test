@@ -9871,6 +9871,25 @@
       ],
       "min_temp": 68.441,
       "max_temp": 84.8192
+    },
+    {
+      "date": "2026-10-02",
+      "timestamp": "2026-10-02T12:00:00Z",
+      "ds_id": "noaacwLEOACSPOSSTL3SnrtKDaily",
+      "ds_name": "VIIRS+AVHRR Super-Collated 2km",
+      "image": "sst_noaacwLEOACSPOSSTL3SnrtKDaily_20261002T120000.png",
+      "bounds": [
+        [
+          30.010000228881836,
+          -77.48999786376953
+        ],
+        [
+          39.0099983215332,
+          -67.98999786376953
+        ]
+      ],
+      "min_temp": 67.87397583007817,
+      "max_temp": 84.46997802734379
     }
   ],
   "2026-02-19": [
