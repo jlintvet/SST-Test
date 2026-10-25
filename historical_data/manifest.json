@@ -11131,6 +11131,46 @@
       "max_temp": 82.54398956298829
     }
   ],
+  "2026-10-24": [
+    {
+      "date": "2026-10-24",
+      "timestamp": "2026-10-24T09:00:00Z",
+      "ds_id": "jplMURSST41",
+      "ds_name": "MUR SST 1km (Highest Resolution)",
+      "image": "sst_jplMURSST41_20261024T090000.png",
+      "bounds": [
+        [
+          30.0,
+          -77.5
+        ],
+        [
+          39.0,
+          -68.0
+        ]
+      ],
+      "min_temp": 62.644999999999996,
+      "max_temp": 82.84100000000001
+    },
+    {
+      "date": "2026-10-24",
+      "timestamp": "2026-10-24T12:00:00Z",
+      "ds_id": "noaacwBLENDEDsstDNDaily",
+      "ds_name": "Geo-Polar Blended 5km (Gap-Free)",
+      "image": "sst_noaacwBLENDEDsstDNDaily_20261024T120000.png",
+      "bounds": [
+        [
+          30.024999618530273,
+          -77.4749984741211
+        ],
+        [
+          39.025001525878906,
+          -67.9749984741211
+        ]
+      ],
+      "min_temp": 62.40198860168457,
+      "max_temp": 82.27399024963378
+    }
+  ],
   "2026-02-19": [
     {
       "date": "2026-02-19",
