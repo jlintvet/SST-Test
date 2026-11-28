@@ -13019,28 +13019,26 @@
       "max_temp": 79.44801757812505
     }
   ],
-  "2026-02-19": [
+  "2026-11-25": [
     {
-      "date": "2026-02-19",
-      "timestamp": "2026-02-19T12:00:00Z",
-      "ds_id": "noaacwBLENDEDsstDNDaily",
-      "ds_name": "Geo-Polar Blended 5km (Gap-Free)",
-      "image": "sst_noaacwBLENDEDsstDNDaily_20260219T120000.png",
+      "date": "2026-11-25",
+      "timestamp": "2026-11-25T09:00:00Z",
+      "ds_id": "jplMURSST41",
+      "ds_name": "MUR SST 1km (Highest Resolution)",
+      "image": "sst_jplMURSST41_20261125T090000.png",
       "bounds": [
         [
-          30.024999618530273,
-          -77.4749984741211
+          30.0,
+          -77.5
         ],
         [
-          39.025001525878906,
-          -67.9749984741211
+          39.0,
+          -68.0
         ]
       ],
-      "min_temp": 35.99310889625549,
-      "max_temp": 73.435990524292
-    }
-  ],
-  "2026-11-25": [
+      "min_temp": 58.307,
+      "max_temp": 79.5974
+    },
     {
       "date": "2026-11-25",
       "timestamp": "2026-11-25T12:00:00Z",
@@ -13083,6 +13081,25 @@
   "2026-11-26": [
     {
       "date": "2026-11-26",
+      "timestamp": "2026-11-26T09:00:00Z",
+      "ds_id": "jplMURSST41",
+      "ds_name": "MUR SST 1km (Highest Resolution)",
+      "image": "sst_jplMURSST41_20261126T090000.png",
+      "bounds": [
+        [
+          30.0,
+          -77.5
+        ],
+        [
+          39.0,
+          -68.0
+        ]
+      ],
+      "min_temp": 58.4474,
+      "max_temp": 79.4048
+    },
+    {
+      "date": "2026-11-26",
       "timestamp": "2026-11-26T12:00:00Z",
       "ds_id": "noaacwBLENDEDsstDNDaily",
       "ds_name": "Geo-Polar Blended 5km (Gap-Free)",
@@ -13099,6 +13116,46 @@
       ],
       "min_temp": 57.289988327026364,
       "max_temp": 79.59487017822266
+    },
+    {
+      "date": "2026-11-26",
+      "timestamp": "2026-11-26T12:00:00Z",
+      "ds_id": "noaacwLEOACSPOSSTL3SnrtKDaily",
+      "ds_name": "VIIRS+AVHRR Super-Collated 2km",
+      "image": "sst_noaacwLEOACSPOSSTL3SnrtKDaily_20261126T120000.png",
+      "bounds": [
+        [
+          30.010000228881836,
+          -77.48999786376953
+        ],
+        [
+          39.0099983215332,
+          -67.98999786376953
+        ]
+      ],
+      "min_temp": 72.80601318359379,
+      "max_temp": 79.92643041992191
+    }
+  ],
+  "2026-02-19": [
+    {
+      "date": "2026-02-19",
+      "timestamp": "2026-02-19T12:00:00Z",
+      "ds_id": "noaacwBLENDEDsstDNDaily",
+      "ds_name": "Geo-Polar Blended 5km (Gap-Free)",
+      "image": "sst_noaacwBLENDEDsstDNDaily_20260219T120000.png",
+      "bounds": [
+        [
+          30.024999618530273,
+          -77.4749984741211
+        ],
+        [
+          39.025001525878906,
+          -67.9749984741211
+        ]
+      ],
+      "min_temp": 35.99310889625549,
+      "max_temp": 73.435990524292
     }
   ]
 }
